@@ -51,7 +51,7 @@ const TaskView: React.FC<{ task: Task }> = ({ task }) => {
   return (
     <View style={styles.contentContainer}>
       <View style={[styles.iconContainer, { backgroundColor: task.color }]}>
-        <MaterialCommunityIcons name={task.icon} size={48} color="#fff" />
+        <MaterialCommunityIcons name={task.icon} size={64} color="#fff" />
       </View>
       <Text style={styles.taskName} numberOfLines={1}>{task.name}</Text>
       <View style={styles.streakBadge}>
@@ -83,8 +83,9 @@ const CalendarView: React.FC<{ task: Task }> = ({ task }) => {
     return {
       date,
       isCompleted,
-      isSkipped: !isCompleted && date < today,
-      isFuture: date > today
+      isPast: date < today,
+      isFuture: date > today,
+      isToday: isToday(date)
     };
   });
 
@@ -97,15 +98,21 @@ const CalendarView: React.FC<{ task: Task }> = ({ task }) => {
   const renderDay = ({ item: day, index }: { item: typeof days[0] | null, index: number }) => (
     <View style={styles.calendarDay}>
       {day ? (
-        day.isCompleted ? (
-          <View style={[styles.calendarDot, { backgroundColor: task.color }]} />
-        ) : day.isSkipped ? (
-          <Text style={styles.calendarX}>×</Text>
-        ) : day.isFuture ? (
-          <View style={[styles.calendarDot, styles.calendarDotFuture]} />
-        ) : (
-          <View style={styles.calendarDot} />
-        )
+        <View style={styles.calendarDayInner}>
+          {day.isCompleted ? (
+            // Completed day (past or current) - show filled colored circle
+            <View style={[styles.calendarDot, { backgroundColor: task.color }]} />
+          ) : day.isToday ? (
+            // Current day incomplete - show colored border circle
+            <View style={[styles.calendarDot, { borderWidth: 2, borderColor: task.color, backgroundColor: 'transparent' }]} />
+          ) : day.isPast ? (
+            // Past incomplete day - show X
+            <Text style={styles.calendarX}>×</Text>
+          ) : (
+            // Future day - show gray circle
+            <View style={[styles.calendarDot, styles.calendarDotFuture]} />
+          )}
+        </View>
       ) : null}
     </View>
   );
@@ -331,9 +338,9 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   iconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 128,
+    height: 128,
+    borderRadius: 64,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -395,19 +402,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 2,
   },
+  calendarDayInner: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
   calendarDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: '#E0E0E0',
   },
   calendarDotFuture: {
     opacity: 0.3,
   },
   calendarX: {
-    fontSize: 16,
+    fontSize: 24,
     color: '#E0E0E0',
     fontWeight: '300',
+    lineHeight: 24,
   },
   statsContainer: {
     flex: 1,
