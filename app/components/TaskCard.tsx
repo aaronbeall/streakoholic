@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { isToday, parseISO } from 'date-fns';
-import React, { useRef } from 'react';
+import { addDays, format, isToday, parseISO, startOfWeek } from 'date-fns';
+import React, { useRef, useState } from 'react';
 import {
   Animated,
   StyleSheet,
@@ -16,25 +16,16 @@ interface TaskCardProps {
   onComplete: () => void;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete }) => {
-  const flipAnim = useRef(new Animated.Value(0)).current;
+type CardSide = 'task' | 'calendar' | 'stats';
 
-  const flipCard = () => {
-    Animated.spring(flipAnim, {
-      toValue: flipAnim._value === 0 ? 1 : 0,
-      friction: 8,
-      tension: 10,
-      useNativeDriver: true,
-    }).start();
-  };
-
+const TaskView: React.FC<{ task: Task }> = ({ task }) => {
   const getStreakBadgeStyle = () => {
     const currentStreak = task.stats?.currentStreak || 0;
     const lastCompleted = task.stats?.lastCompleted;
     
     if (!lastCompleted) {
       return {
-        backgroundColor: '#6B8AFE', // Cool blue for no streak
+        backgroundColor: '#6B8AFE',
         icon: 'sleep' as const,
       };
     }
@@ -43,18 +34,134 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete })
     
     if (isToday(lastCompletedDate)) {
       return {
-        backgroundColor: '#FF6B6B', // Solid red for completed today
+        backgroundColor: '#FF6B6B',
         icon: 'fire' as const,
       };
     }
 
     return {
-      backgroundColor: '#FFA726', // Warm orange for pending
+      backgroundColor: '#FFA726',
       icon: 'clock-outline' as const,
     };
   };
 
   const streakBadgeStyle = getStreakBadgeStyle();
+
+  return (
+    <View style={styles.contentContainer}>
+      <View style={[styles.iconContainer, { backgroundColor: task.color }]}>
+        <MaterialCommunityIcons name={task.icon} size={48} color="#fff" />
+      </View>
+      <Text style={styles.taskName} numberOfLines={1}>{task.name}</Text>
+      <View style={styles.streakBadge}>
+        <View style={[styles.streakBubble, { backgroundColor: streakBadgeStyle.backgroundColor }]}>
+          <MaterialCommunityIcons name={streakBadgeStyle.icon} size={14} color="#fff" />
+          <Text style={styles.streakText}>{task.stats?.currentStreak || 0}</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+const CalendarView: React.FC<{ task: Task }> = ({ task }) => {
+  const today = new Date();
+  const weekStart = startOfWeek(today);
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  
+  return (
+    <View style={styles.calendarContainer}>
+      <View style={styles.calendarHeader}>
+        <Text style={styles.calendarTitle}>This Week</Text>
+      </View>
+      <View style={styles.calendarGrid}>
+        {days.map((day, index) => {
+          const isCompleted = task.completions?.some(completion => 
+            isToday(parseISO(completion.date))
+          );
+          const isCurrentDay = isToday(day);
+          
+          return (
+            <View key={index} style={styles.calendarDay}>
+              <Text style={styles.calendarDayName}>{format(day, 'EEE')}</Text>
+              <View style={[
+                styles.calendarDayCircle,
+                isCompleted && styles.calendarDayCompleted,
+                isCurrentDay && styles.calendarDayCurrent,
+              ]}>
+                <Text style={[
+                  styles.calendarDayNumber,
+                  (isCompleted || isCurrentDay) && styles.calendarDayNumberActive
+                ]}>
+                  {format(day, 'd')}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+const StatsView: React.FC<{ task: Task; onComplete: () => void }> = ({ task, onComplete }) => (
+  <View style={styles.statsContainer}>
+    <View style={styles.statItem}>
+      <Text style={styles.statValue}>{task.stats?.currentStreak || 0}</Text>
+      <Text style={styles.statLabel}>Current Streak</Text>
+    </View>
+    <View style={styles.statItem}>
+      <Text style={styles.statValue}>{task.stats?.bestStreak || 0}</Text>
+      <Text style={styles.statLabel}>Best Streak</Text>
+    </View>
+    <View style={styles.statItem}>
+      <Text style={styles.statValue}>{task.stats?.completionRate || 0}%</Text>
+      <Text style={styles.statLabel}>Completion Rate</Text>
+    </View>
+    <TouchableOpacity
+      style={[styles.completeButton, { backgroundColor: task.color }]}
+      onPress={onComplete}
+    >
+      <Text style={styles.completeButtonText}>Complete</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete }) => {
+  const flipAnim = useRef(new Animated.Value(0)).current;
+  const [sides, setSides] = useState<[CardSide, CardSide]>(['task', 'calendar']);
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  const flipCard = () => {
+    const nextSides: [CardSide, CardSide] = [...sides];
+    if (!isFlipped) {
+      // Flipping to back, update back side
+      if (sides[0] === 'task') {
+        nextSides[1] = 'calendar';
+      } else if (sides[0] === 'calendar') {
+        nextSides[1] = 'stats';
+      } else if (sides[0] === 'stats') {
+        nextSides[1] = 'task';
+      }
+    } else {
+      // Flipping to front, update front side
+      if (sides[1] === 'calendar') {
+        nextSides[0] = 'stats';
+      } else if (sides[1] === 'stats') {
+        nextSides[0] = 'task';
+      } else if (sides[1] === 'task') {
+        nextSides[0] = 'calendar';
+      }
+    }
+    setSides(nextSides);
+    setIsFlipped(!isFlipped);
+    
+    Animated.spring(flipAnim, {
+      toValue: isFlipped ? 0 : 1,
+      friction: 8,
+      tension: 10,
+      useNativeDriver: true,
+    }).start();
+  };
 
   const frontAnimatedStyle = {
     transform: [
@@ -78,45 +185,26 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete })
     ],
   };
 
+  const renderContent = (side: CardSide) => {
+    switch (side) {
+      case 'task':
+        return <TaskView task={task} />;
+      case 'calendar':
+        return <CalendarView task={task} />;
+      case 'stats':
+        return <StatsView task={task} onComplete={onComplete} />;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={flipCard} activeOpacity={0.9}>
         <Animated.View style={[styles.card, frontAnimatedStyle]}>
-          <View style={styles.contentContainer}>
-            <View style={[styles.iconContainer, { backgroundColor: task.color }]}>
-              <MaterialCommunityIcons name={task.icon} size={48} color="#fff" />
-            </View>
-            <Text style={styles.taskName} numberOfLines={1}>{task.name}</Text>
-            <View style={styles.streakBadge}>
-              <View style={[styles.streakBubble, { backgroundColor: streakBadgeStyle.backgroundColor }]}>
-                <MaterialCommunityIcons name={streakBadgeStyle.icon} size={14} color="#fff" />
-                <Text style={styles.streakText}>{task.stats?.currentStreak || 0}</Text>
-              </View>
-            </View>
-          </View>
+          {renderContent(sides[0])}
         </Animated.View>
 
         <Animated.View style={[styles.card, styles.cardBack, backAnimatedStyle]}>
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{task.stats?.currentStreak || 0}</Text>
-              <Text style={styles.statLabel}>Current Streak</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{task.stats?.bestStreak || 0}</Text>
-              <Text style={styles.statLabel}>Best Streak</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{task.stats?.completionRate || 0}%</Text>
-              <Text style={styles.statLabel}>Completion Rate</Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={[styles.completeButton, { backgroundColor: task.color }]}
-            onPress={onComplete}
-          >
-            <Text style={styles.completeButtonText}>Complete</Text>
-          </TouchableOpacity>
+          {renderContent(sides[1])}
         </Animated.View>
       </TouchableOpacity>
     </View>
@@ -196,10 +284,59 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  calendarContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  calendarHeader: {
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  calendarTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  calendarDay: {
+    alignItems: 'center',
+  },
+  calendarDayName: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  calendarDayCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calendarDayCompleted: {
+    backgroundColor: '#FF6B6B',
+    borderColor: '#FF6B6B',
+  },
+  calendarDayCurrent: {
+    borderColor: '#FFA726',
+    borderWidth: 2,
+  },
+  calendarDayNumber: {
+    fontSize: 14,
+    color: '#333',
+  },
+  calendarDayNumberActive: {
+    color: '#fff',
+  },
+  statsContainer: {
+    flex: 1,
+    justifyContent: 'space-around',
+    padding: 16,
   },
   statItem: {
     alignItems: 'center',
