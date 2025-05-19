@@ -1,8 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { addDays, format, isToday, parseISO, startOfWeek } from 'date-fns';
+import { addDays, isToday, parseISO, startOfWeek } from 'date-fns';
 import React, { useRef, useState } from 'react';
 import {
   Animated,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -65,66 +66,152 @@ const TaskView: React.FC<{ task: Task }> = ({ task }) => {
 
 const CalendarView: React.FC<{ task: Task }> = ({ task }) => {
   const today = new Date();
-  const weekStart = startOfWeek(today);
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const daysInMonth = endOfMonth.getDate();
   
+  // Get the day of week for the first day of the month (0 = Sunday, 6 = Saturday)
+  const firstDayOfWeek = startOfMonth.getDay();
+  
+  // Create array of all days in the month
+  const days = Array.from({ length: daysInMonth }, (_, i) => {
+    const date = new Date(today.getFullYear(), today.getMonth(), i + 1);
+    const isCompleted = task.completions?.some(completion => 
+      isToday(parseISO(completion.date)) && 
+      parseISO(completion.date).getDate() === date.getDate()
+    );
+    return {
+      date,
+      isCompleted,
+      isSkipped: !isCompleted && date < today,
+      isFuture: date > today
+    };
+  });
+
+  // Create grid array with empty cells for start of month
+  const gridDays = [
+    ...Array(firstDayOfWeek).fill(null),
+    ...days
+  ];
+
+  const renderDay = ({ item: day, index }: { item: typeof days[0] | null, index: number }) => (
+    <View style={styles.calendarDay}>
+      {day ? (
+        day.isCompleted ? (
+          <View style={[styles.calendarDot, { backgroundColor: task.color }]} />
+        ) : day.isSkipped ? (
+          <Text style={styles.calendarX}>×</Text>
+        ) : day.isFuture ? (
+          <View style={[styles.calendarDot, styles.calendarDotFuture]} />
+        ) : (
+          <View style={styles.calendarDot} />
+        )
+      ) : null}
+    </View>
+  );
+
   return (
     <View style={styles.calendarContainer}>
-      <View style={styles.calendarHeader}>
-        <Text style={styles.calendarTitle}>This Week</Text>
-      </View>
       <View style={styles.calendarGrid}>
-        {days.map((day, index) => {
-          const isCompleted = task.completions?.some(completion => 
-            isToday(parseISO(completion.date))
-          );
-          const isCurrentDay = isToday(day);
-          
-          return (
-            <View key={index} style={styles.calendarDay}>
-              <Text style={styles.calendarDayName}>{format(day, 'EEE')}</Text>
-              <View style={[
-                styles.calendarDayCircle,
-                isCompleted && styles.calendarDayCompleted,
-                isCurrentDay && styles.calendarDayCurrent,
-              ]}>
-                <Text style={[
-                  styles.calendarDayNumber,
-                  (isCompleted || isCurrentDay) && styles.calendarDayNumberActive
-                ]}>
-                  {format(day, 'd')}
-                </Text>
-              </View>
-            </View>
-          );
-        })}
+        <View style={styles.calendarDayNames}>
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+            <Text key={index} style={styles.calendarDayName}>{day}</Text>
+          ))}
+        </View>
+        <FlatList
+          data={gridDays}
+          renderItem={renderDay}
+          numColumns={7}
+          scrollEnabled={false}
+          keyExtractor={(_, index) => index.toString()}
+        />
       </View>
     </View>
   );
 };
 
-const StatsView: React.FC<{ task: Task; onComplete: () => void }> = ({ task, onComplete }) => (
-  <View style={styles.statsContainer}>
-    <View style={styles.statItem}>
-      <Text style={styles.statValue}>{task.stats?.currentStreak || 0}</Text>
-      <Text style={styles.statLabel}>Current Streak</Text>
+const StatsView: React.FC<{ task: Task }> = ({ task }) => {
+  const getWeeklyStats = () => {
+    const today = new Date();
+    const weekStart = startOfWeek(today);
+    const completions = task.completions?.filter(completion => {
+      const date = parseISO(completion.date);
+      return date >= weekStart && date <= today;
+    }) || [];
+    return {
+      completed: completions.length,
+      total: 7
+    };
+  };
+
+  const getMonthlyStats = () => {
+    const today = new Date();
+    const thirtyDaysAgo = addDays(today, -30);
+    const completions = task.completions?.filter(completion => {
+      const date = parseISO(completion.date);
+      return date >= thirtyDaysAgo && date <= today;
+    }) || [];
+    return {
+      completed: completions.length,
+      total: 30
+    };
+  };
+
+  const weeklyStats = getWeeklyStats();
+  const monthlyStats = getMonthlyStats();
+
+  return (
+    <View style={styles.statsContainer}>
+      <View style={styles.statRow}>
+        <Text style={styles.statLabel}>Streak: {task.stats?.currentStreak || 0}</Text>
+        <Text style={styles.statLabel}>Best: {task.stats?.bestStreak || 0}</Text>
+      </View>
+      <View style={[styles.progressBar, { backgroundColor: task.color + '33' }]}>
+        <View 
+          style={[
+            styles.progressFill, 
+            { 
+              backgroundColor: task.color,
+              width: `${Math.min((task.stats?.currentStreak || 0) / 10 * 100, 100)}%` as const
+            }
+          ]} 
+        />
+      </View>
+
+      <View style={styles.statRow}>
+        <Text style={styles.statLabel}>This week</Text>
+        <Text style={styles.statValue}>{weeklyStats.completed}/{weeklyStats.total}</Text>
+      </View>
+      <View style={[styles.progressBar, { backgroundColor: task.color + '33' }]}>
+        <View 
+          style={[
+            styles.progressFill, 
+            { 
+              backgroundColor: task.color,
+              width: `${(weeklyStats.completed / weeklyStats.total) * 100}%` as const
+            }
+          ]} 
+        />
+      </View>
+
+      <View style={styles.statRow}>
+        <Text style={styles.statLabel}>Past 30 days</Text>
+        <Text style={styles.statValue}>{monthlyStats.completed}/{monthlyStats.total}</Text>
+      </View>
+      <View style={[styles.progressBar, { backgroundColor: task.color + '33' }]}>
+        <View 
+          style={[
+            styles.progressFill, 
+            { 
+              backgroundColor: task.color,
+              width: `${(monthlyStats.completed / monthlyStats.total) * 100}%` as const
+            }
+          ]} 
+        />
+      </View>
     </View>
-    <View style={styles.statItem}>
-      <Text style={styles.statValue}>{task.stats?.bestStreak || 0}</Text>
-      <Text style={styles.statLabel}>Best Streak</Text>
-    </View>
-    <View style={styles.statItem}>
-      <Text style={styles.statValue}>{task.stats?.completionRate || 0}%</Text>
-      <Text style={styles.statLabel}>Completion Rate</Text>
-    </View>
-    <TouchableOpacity
-      style={[styles.completeButton, { backgroundColor: task.color }]}
-      onPress={onComplete}
-    >
-      <Text style={styles.completeButtonText}>Complete</Text>
-    </TouchableOpacity>
-  </View>
-);
+  );
+};
 
 export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete }) => {
   const flipAnim = useRef(new Animated.Value(0)).current;
@@ -192,7 +279,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete })
       case 'calendar':
         return <CalendarView task={task} />;
       case 'stats':
-        return <StatsView task={task} onComplete={onComplete} />;
+        return <StatsView task={task} />;
     }
   };
 
@@ -286,79 +373,68 @@ const styles = StyleSheet.create({
   },
   calendarContainer: {
     flex: 1,
-    padding: 16,
-  },
-  calendarHeader: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  calendarTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    padding: 12,
   },
   calendarGrid: {
+    flex: 1,
+  },
+  calendarDayNames: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  calendarDay: {
-    alignItems: 'center',
-  },
-  calendarDayName: {
-    fontSize: 12,
-    color: '#666',
     marginBottom: 4,
   },
-  calendarDayCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+  calendarDayName: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 10,
+    color: '#666',
+  },
+  calendarDay: {
+    flex: 1,
+    aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 2,
   },
-  calendarDayCompleted: {
-    backgroundColor: '#FF6B6B',
-    borderColor: '#FF6B6B',
+  calendarDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E0E0E0',
   },
-  calendarDayCurrent: {
-    borderColor: '#FFA726',
-    borderWidth: 2,
+  calendarDotFuture: {
+    opacity: 0.3,
   },
-  calendarDayNumber: {
-    fontSize: 14,
-    color: '#333',
-  },
-  calendarDayNumberActive: {
-    color: '#fff',
+  calendarX: {
+    fontSize: 16,
+    color: '#E0E0E0',
+    fontWeight: '300',
   },
   statsContainer: {
     flex: 1,
-    justifyContent: 'space-around',
     padding: 16,
+    gap: 12,
   },
-  statItem: {
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
-    marginTop: 4,
   },
-  completeButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  completeButtonText: {
-    color: '#fff',
+  statValue: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#333',
+  },
+  progressBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
   },
 }); 
