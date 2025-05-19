@@ -1,12 +1,13 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { isToday, parseISO } from 'date-fns';
 import React, { useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Task } from '../types';
 
 interface TaskCardProps {
@@ -26,6 +27,34 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete })
       useNativeDriver: true,
     }).start();
   };
+
+  const getStreakBadgeStyle = () => {
+    const currentStreak = task.stats?.currentStreak || 0;
+    const lastCompleted = task.stats?.lastCompleted;
+    
+    if (!lastCompleted) {
+      return {
+        backgroundColor: '#6B8AFE', // Cool blue for no streak
+        icon: 'sleep' as const,
+      };
+    }
+
+    const lastCompletedDate = parseISO(lastCompleted);
+    
+    if (isToday(lastCompletedDate)) {
+      return {
+        backgroundColor: '#FF6B6B', // Solid red for completed today
+        icon: 'fire' as const,
+      };
+    }
+
+    return {
+      backgroundColor: '#FFA726', // Warm orange for pending
+      icon: 'clock-outline' as const,
+    };
+  };
+
+  const streakBadgeStyle = getStreakBadgeStyle();
 
   const frontAnimatedStyle = {
     transform: [
@@ -59,8 +88,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete })
             </View>
             <Text style={styles.taskName} numberOfLines={1}>{task.name}</Text>
             <View style={styles.streakBadge}>
-              <View style={styles.streakBubble}>
-                <MaterialCommunityIcons name="fire" size={14} color="#fff" />
+              <View style={[styles.streakBubble, { backgroundColor: streakBadgeStyle.backgroundColor }]}>
+                <MaterialCommunityIcons name={streakBadgeStyle.icon} size={14} color="#fff" />
                 <Text style={styles.streakText}>{task.stats?.currentStreak || 0}</Text>
               </View>
             </View>
