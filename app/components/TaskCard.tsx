@@ -15,6 +15,7 @@ interface TaskCardProps {
   task: Task;
   onPress: () => void;
   onComplete: () => void;
+  size: number;
 }
 
 type CardSide = 'task' | 'calendar' | 'stats';
@@ -220,7 +221,7 @@ const StatsView: React.FC<{ task: Task }> = ({ task }) => {
   );
 };
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete, size }) => {
   const flipAnim = useRef(new Animated.Value(0)).current;
   const [sides, setSides] = useState<[CardSide, CardSide]>(['task', 'calendar']);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -291,8 +292,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete })
   };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity onPress={flipCard} activeOpacity={0.9}>
+    <View style={[styles.container, { width: size, height: size }]}>
+      <TouchableOpacity onPress={flipCard} activeOpacity={0.9} style={styles.touchable}>
         <Animated.View style={[styles.card, frontAnimatedStyle]}>
           {renderContent(sides[0])}
         </Animated.View>
@@ -308,10 +309,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete })
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginBottom: 16,
+  },
+  touchable: {
+    flex: 1,
   },
   card: {
-    flex: 1,
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
@@ -325,17 +330,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     backfaceVisibility: 'hidden',
   },
+  cardBack: {
+    transform: [{ rotateY: '180deg' }],
+  },
   contentContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  cardBack: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
   iconContainer: {
     width: 128,
