@@ -1,62 +1,151 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { startOfWeek, subDays } from 'date-fns';
+import { addDays, format, subDays, subMonths } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
+import tinycolor from 'tinycolor2';
 import { useTaskContext } from '../context/TaskContext';
+
+type TimeRange = 'week' | 'month' | 'year' | 'all';
 
 export default function TaskStatsScreen() {
   const router = useRouter();
   const { taskId } = useLocalSearchParams<{ taskId: string }>();
   const { tasks } = useTaskContext();
+  const [timeRange, setTimeRange] = useState<TimeRange>('month');
 
   const task = tasks.find(t => t.id === taskId);
   if (!task) {
     return null;
   }
 
-  const getWeeklyStats = () => {
+  const getTimeRangeData = () => {
     const today = new Date();
-    const weekStart = startOfWeek(today);
-    const completions = task.completions?.filter(completion => {
+    let startDate: Date;
+    let labels: string[] = [];
+    let data: number[] = [];
+    let groupSize = 1; // Default group size
+
+    switch (timeRange) {
+      case 'week':
+        startDate = subDays(today, 6); // 7 days including today
+        labels = Array.from({ length: 7 }, (_, i) => {
+          const date = subDays(today, i); // Start from today and go backwards
+          return format(date, 'EEE');
+        }).reverse(); // Reverse to maintain left-to-right order
+        data = Array(7).fill(0);
+        break;
+      case 'month':
+        startDate = subDays(today, 29); // 30 days including today
+        labels = Array.from({ length: 30 }, (_, i) => {
+          const date = subDays(today, i); // Start from today and go backwards
+          return i % 5 === 0 ? format(date, 'MMM d') : '';
+        }).reverse(); // Reverse to maintain left-to-right order
+        data = Array(30).fill(0);
+        break;
+      case 'year':
+        startDate = subMonths(today, 11); // 12 months including current month
+        labels = Array.from({ length: 12 }, (_, i) => {
+          const date = subMonths(today, i); // Start from today and go backwards
+          return format(date, 'MMM');
+        }).reverse(); // Reverse to maintain left-to-right order
+        data = Array(12).fill(0);
+        break;
+      case 'all':
+        // Find first and last completion dates
+        const completionDates = task.completions?.map(c => new Date(c.date)) || [];
+        if (completionDates.length === 0) {
+          startDate = new Date(task.createdAt);
+        } else {
+          startDate = new Date(Math.min(...completionDates.map(d => d.getTime())));
+          const lastCompletion = new Date(Math.max(...completionDates.map(d => d.getTime())));
+          today.setTime(lastCompletion.getTime()); // Use last completion as the end date
+        }
+        
+        const totalDays = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        let dateFormat: string;
+
+        if (totalDays <= 30) {
+          // If less than a month, show daily
+          groupSize = 1;
+          dateFormat = 'MMM d';
+        } else if (totalDays <= 90) {
+          // If less than 3 months, show weekly
+          groupSize = 7;
+          dateFormat = 'MMM d';
+        } else if (totalDays <= 365) {
+          // If less than a year, show monthly
+          groupSize = 30;
+          dateFormat = 'MMM';
+        } else {
+          // If more than a year, show quarterly
+          groupSize = 90;
+          dateFormat = 'MMM yyyy';
+        }
+
+        const numGroups = Math.ceil(totalDays / groupSize);
+        const midPoint = Math.floor(numGroups / 2);
+        
+        labels = Array.from({ length: numGroups }, (_, i) => {
+          if (i === 0 || i === midPoint || i === numGroups - 1) {
+            const date = addDays(startDate, i * groupSize);
+            return format(date, dateFormat);
+          }
+          return '';
+        });
+        data = Array(numGroups).fill(0);
+        break;
+    }
+
+    task.completions?.forEach(completion => {
       const date = new Date(completion.date);
-      return date >= weekStart && date <= today;
-    }) || [];
-    return {
-      completed: completions.length,
-      total: 7
-    };
+      if (date >= startDate && date <= today) {
+        const index = timeRange === 'week' 
+          ? 6 - Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+          : timeRange === 'month'
+          ? 29 - Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+          : timeRange === 'year'
+          ? 11 - Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24 * 30))
+          : Math.floor((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * groupSize));
+        if (index >= 0 && index < data.length) {
+          data[index] += completion.timesCompleted;
+        }
+      }
+    });
+
+    return { labels, data };
   };
 
-  const getMonthlyStats = () => {
-    const today = new Date();
-    const thirtyDaysAgo = subDays(today, 30);
-    const completions = task.completions?.filter(completion => {
-      const date = new Date(completion.date);
-      return date >= thirtyDaysAgo && date <= today;
-    }) || [];
-    return {
-      completed: completions.length,
-      total: 30
-    };
+  const { labels, data } = getTimeRangeData();
+  const chartData = {
+    labels,
+    datasets: [{
+      data,
+      color: (opacity = 1) => task.color,
+      strokeWidth: 2,
+    }],
   };
 
-  const getYearlyStats = () => {
-    const today = new Date();
-    const yearStart = new Date(today.getFullYear(), 0, 1);
-    const completions = task.completions?.filter(completion => {
-      const date = new Date(completion.date);
-      return date >= yearStart && date <= today;
-    }) || [];
-    return {
-      completed: completions.length,
-      total: Math.ceil((today.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24))
-    };
+  const getBackgroundColor = (color: string) => {
+    const colorObj = tinycolor(color);
+    return tinycolor({
+      h: colorObj.toHsl().h,
+      s: 15,
+      l: 95
+    }).toString();
   };
 
-  const weeklyStats = getWeeklyStats();
-  const monthlyStats = getMonthlyStats();
-  const yearlyStats = getYearlyStats();
+  const TimeRangeButton = ({ range, label }: { range: TimeRange; label: string }) => (
+    <TouchableOpacity
+      style={[styles.timeRangeButton, timeRange === range && { backgroundColor: task.color }]}
+      onPress={() => setTimeRange(range)}
+    >
+      <Text style={[styles.timeRangeButtonText, timeRange === range && { color: '#fff' }]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
@@ -68,85 +157,80 @@ export default function TaskStatsScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        <View style={styles.statsCard}>
-          <View style={styles.statRow}>
+        <View style={styles.statsGrid}>
+          <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
+            <MaterialCommunityIcons name="fire" size={24} color="#FF6B6B" />
+            <Text style={[styles.statNumber, { color: '#FF6B6B' }]}>{task.stats?.currentStreak || 0}</Text>
             <Text style={styles.statLabel}>Current Streak</Text>
-            <View style={styles.statValue}>
-              <MaterialCommunityIcons name="fire" size={20} color="#FF6B6B" />
-              <Text style={styles.statNumber}>{task.stats?.currentStreak || 0}</Text>
-            </View>
           </View>
-          <View style={styles.statRow}>
+          <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
+            <MaterialCommunityIcons name="trophy" size={24} color="#FFD700" />
+            <Text style={[styles.statNumber, { color: '#FFD700' }]}>{task.stats?.bestStreak || 0}</Text>
             <Text style={styles.statLabel}>Best Streak</Text>
-            <View style={styles.statValue}>
-              <MaterialCommunityIcons name="trophy" size={20} color="#FFD700" />
-              <Text style={styles.statNumber}>{task.stats?.bestStreak || 0}</Text>
-            </View>
           </View>
-          <View style={styles.statRow}>
+          <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
+            <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50" />
+            <Text style={[styles.statNumber, { color: '#4CAF50' }]}>{task.stats?.totalCompletions || 0}</Text>
             <Text style={styles.statLabel}>Total Completions</Text>
-            <View style={styles.statValue}>
-              <MaterialCommunityIcons name="check-circle" size={20} color="#4CAF50" />
-              <Text style={styles.statNumber}>{task.stats?.totalCompletions || 0}</Text>
-            </View>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
+            <MaterialCommunityIcons name="chart-line" size={24} color="#2196F3" />
+            <Text style={[styles.statNumber, { color: '#2196F3' }]}>
+              {Math.round((task.stats?.completionRate || 0) * 100)}%
+            </Text>
+            <Text style={styles.statLabel}>Completion Rate</Text>
           </View>
         </View>
 
-        <View style={styles.progressSection}>
-          <Text style={styles.sectionTitle}>Completion Rates</Text>
-          
-          <View style={styles.progressCard}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>This Week</Text>
-              <Text style={styles.progressValue}>{weeklyStats.completed}/{weeklyStats.total}</Text>
-            </View>
-            <View style={[styles.progressBar, { backgroundColor: task.color + '33' }]}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { 
-                    backgroundColor: task.color,
-                    width: `${(weeklyStats.completed / weeklyStats.total) * 100}%`
-                  }
-                ]} 
-              />
+        <View style={styles.chartSection}>
+          <View style={styles.chartHeader}>
+            <Text style={styles.sectionTitle}>Activity</Text>
+            <View style={styles.timeRangeContainer}>
+              <TimeRangeButton range="week" label="Week" />
+              <TimeRangeButton range="month" label="Month" />
+              <TimeRangeButton range="year" label="Year" />
+              <TimeRangeButton range="all" label="All Time" />
             </View>
           </View>
-
-          <View style={styles.progressCard}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>Past 30 Days</Text>
-              <Text style={styles.progressValue}>{monthlyStats.completed}/{monthlyStats.total}</Text>
-            </View>
-            <View style={[styles.progressBar, { backgroundColor: task.color + '33' }]}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { 
-                    backgroundColor: task.color,
-                    width: `${(monthlyStats.completed / monthlyStats.total) * 100}%`
-                  }
-                ]} 
-              />
-            </View>
-          </View>
-
-          <View style={styles.progressCard}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>This Year</Text>
-              <Text style={styles.progressValue}>{yearlyStats.completed}/{yearlyStats.total}</Text>
-            </View>
-            <View style={[styles.progressBar, { backgroundColor: task.color + '33' }]}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { 
-                    backgroundColor: task.color,
-                    width: `${(yearlyStats.completed / yearlyStats.total) * 100}%`
-                  }
-                ]} 
-              />
-            </View>
+          <View style={[styles.chartCard, { padding: 0 }]}>
+            <LineChart
+              data={chartData}
+              width={Dimensions.get('window').width - 48}
+              height={220}
+              chartConfig={{
+                backgroundColor: '#fff',
+                backgroundGradientFrom: '#fff',
+                backgroundGradientTo: '#fff',
+                decimalPlaces: 0,
+                color: (opacity = 1) => task.color,
+                labelColor: (opacity = 1) => '#999',
+                style: {
+                  borderRadius: 16,
+                },
+                propsForDots: {
+                  r: '6',
+                },
+                propsForBackgroundLines: {
+                  strokeDasharray: '', // solid lines
+                  stroke: '#f0f0f0',
+                  strokeWidth: 1,
+                },
+                propsForLabels: {
+                  fontSize: 12,
+                  fontFamily: 'System',
+                  fontWeight: '500',
+                },
+                count: timeRange === 'week' ? 7 : timeRange === 'month' ? 5 : timeRange === 'year' ? 6 : 6,
+              }}
+              bezier
+              withInnerLines={true}
+              withOuterLines={false}
+              withVerticalLines={false}
+              withHorizontalLines={true}
+              withDots={true}
+              withShadow={false}
+              style={styles.chart}
+            />
           </View>
         </View>
       </ScrollView>
@@ -179,81 +263,75 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  statsCard: {
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: '45%',
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
+    alignItems: 'center',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  statRow: {
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginVertical: 8,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  chartSection: {
+    marginBottom: 24,
+  },
+  chartHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  statLabel: {
-    fontSize: 16,
-    color: '#666',
-  },
-  statValue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  progressSection: {
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 12,
   },
-  progressCard: {
+  timeRangeContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  timeRangeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+  },
+  timeRangeButtonText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  chartCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  progressLabel: {
-    fontSize: 16,
-    color: '#666',
-  },
-  progressValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-  },
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 4,
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
   },
 }); 
