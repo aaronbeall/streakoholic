@@ -261,6 +261,8 @@ export default function TaskStatsScreen() {
                   fontFamily: 'System',
                   fontWeight: '400',
                 },
+                fillShadowGradient: task.color,
+                fillShadowGradientOpacity:.2,
               }}
               bezier
               withInnerLines={false}
@@ -268,7 +270,7 @@ export default function TaskStatsScreen() {
               withVerticalLines={false}
               withHorizontalLines={true}
               withDots={true}
-              withShadow={false}
+              withShadow={true}
               style={styles.chart}
             />
           </View>
@@ -334,6 +336,8 @@ export default function TaskStatsScreen() {
                   fontFamily: 'System',
                   fontWeight: '400',
                 },
+                fillShadowGradient: task.color,
+                fillShadowGradientOpacity: .2,
               }}
               bezier
               withInnerLines={false}
@@ -341,7 +345,7 @@ export default function TaskStatsScreen() {
               withVerticalLines={false}
               withHorizontalLines={true}
               withDots={true}
-              withShadow={false}
+              withShadow={true}
               style={styles.chart}
             />
           </View>
