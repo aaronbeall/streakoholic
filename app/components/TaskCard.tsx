@@ -79,10 +79,13 @@ const CardCalendar: React.FC<{ task: Task }> = ({ task }) => {
     const dateString = format(date, 'yyyy-MM-dd');
     const isCompleted = task.completions?.some(completion => completion.date === dateString);
     const isToday = dateString === today;
+    const isPast = dateString < today;
+    const isMissed = isPast && !isCompleted;
     return {
       date,
       isCompleted,
       isToday,
+      isMissed,
       dayNumber: i + 1
     };
   });
@@ -108,6 +111,8 @@ const CardCalendar: React.FC<{ task: Task }> = ({ task }) => {
                     <View style={[styles.calendarDot, { backgroundColor: task.color }]} />
                   ) : day.isToday ? (
                     <View style={[styles.calendarDot, { borderWidth: 2, borderColor: task.color, backgroundColor: 'transparent' }]} />
+                  ) : day.isMissed ? (
+                    <MaterialCommunityIcons name="close" size={20} color="#E0E0E0" />
                   ) : (
                     <View style={[styles.calendarDot, styles.calendarDotFuture]} />
                   )}
@@ -420,12 +425,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 8,
+    aspectRatio: 1,
   },
   calendarDot: {
     width: 16,
     height: 16,
     borderRadius: 8,
     backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   calendarDotFuture: {
     opacity: 0.3,
