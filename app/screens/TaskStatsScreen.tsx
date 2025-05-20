@@ -3,7 +3,7 @@ import { addDays, format, subDays, subMonths } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
+import { BarChart, LineChart } from 'react-native-chart-kit';
 import tinycolor from 'tinycolor2';
 import { useTaskContext } from '../context/TaskContext';
 
@@ -147,6 +147,47 @@ export default function TaskStatsScreen() {
     </TouchableOpacity>
   );
 
+  const getCompletionPatterns = () => {
+    const dayOfWeekData = Array(7).fill(0);
+    const hourOfDayData = Array(24).fill(0);
+
+    task.completions?.forEach(completion => {
+      const date = new Date(completion.date);
+      // Day of week (0 = Sunday, 6 = Saturday)
+      dayOfWeekData[date.getDay()] += completion.timesCompleted;
+      // Hour of day (0-23)
+      hourOfDayData[date.getHours()] += completion.timesCompleted;
+    });
+
+    return { dayOfWeekData, hourOfDayData };
+  };
+
+  const { dayOfWeekData, hourOfDayData } = getCompletionPatterns();
+
+  const dayOfWeekLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const hourOfDayLabels = Array.from({ length: 24 }, (_, i) => {
+    if (i % 6 === 0) { // Show every 6 hours
+      const hour = i === 0 || i === 12 ? 12 : i % 12;
+      const ampm = i < 12 ? 'am' : 'pm';
+      return `${hour}${ampm}`;
+    }
+    return '';
+  });
+
+  const dayOfWeekChartData = {
+    labels: dayOfWeekLabels,
+    datasets: [{
+      data: dayOfWeekData,
+    }],
+  };
+
+  const hourOfDayChartData = {
+    labels: hourOfDayLabels,
+    datasets: [{
+      data: hourOfDayData,
+    }],
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -192,11 +233,11 @@ export default function TaskStatsScreen() {
               <TimeRangeButton range="all" label="All Time" />
             </View>
           </View>
-          <View style={[styles.chartCard, { padding: 0 }]}>
+          <View style={[styles.chartCard, { padding: 0, marginBottom: 16 }]}>
             <LineChart
               data={chartData}
               width={Dimensions.get('window').width - 48}
-              height={220}
+              height={180}
               chartConfig={{
                 backgroundColor: '#fff',
                 backgroundGradientFrom: '#fff',
@@ -208,22 +249,94 @@ export default function TaskStatsScreen() {
                   borderRadius: 16,
                 },
                 propsForDots: {
-                  r: '6',
+                  r: '4',
                 },
                 propsForBackgroundLines: {
-                  strokeDasharray: '', // solid lines
+                  strokeDasharray: '',
                   stroke: '#f0f0f0',
                   strokeWidth: 1,
                 },
                 propsForLabels: {
-                  fontSize: 12,
+                  fontSize: 11,
                   fontFamily: 'System',
-                  fontWeight: '500',
+                  fontWeight: '400',
                 },
-                count: timeRange === 'week' ? 7 : timeRange === 'month' ? 5 : timeRange === 'year' ? 6 : 6,
               }}
               bezier
-              withInnerLines={true}
+              withInnerLines={false}
+              withOuterLines={false}
+              withVerticalLines={false}
+              withHorizontalLines={true}
+              withDots={true}
+              withShadow={false}
+              style={styles.chart}
+            />
+          </View>
+
+          <View style={[styles.chartCard, { padding: 0, marginBottom: 16 }]}>
+            <BarChart
+              data={dayOfWeekChartData}
+              width={Dimensions.get('window').width - 48}
+              height={180}
+              yAxisLabel=""
+              yAxisSuffix=""
+              chartConfig={{
+                backgroundColor: '#fff',
+                backgroundGradientFrom: '#fff',
+                backgroundGradientTo: '#fff',
+                decimalPlaces: 0,
+                color: (opacity = 1) => task.color,
+                labelColor: (opacity = 1) => '#999',
+                style: {
+                  borderRadius: 16,
+                },
+                propsForLabels: {
+                  fontSize: 11,
+                  fontFamily: 'System',
+                  fontWeight: '400',
+                },
+                propsForBackgroundLines: {
+                  strokeDasharray: '',
+                  stroke: '#f0f0f0',
+                  strokeWidth: 1,
+                },
+              }}
+              style={styles.chart}
+              fromZero
+            />
+          </View>
+
+          <View style={[styles.chartCard, { padding: 0 }]}>
+            <LineChart
+              data={hourOfDayChartData}
+              width={Dimensions.get('window').width - 48}
+              height={180}
+              chartConfig={{
+                backgroundColor: '#fff',
+                backgroundGradientFrom: '#fff',
+                backgroundGradientTo: '#fff',
+                decimalPlaces: 0,
+                color: (opacity = 1) => task.color,
+                labelColor: (opacity = 1) => '#999',
+                style: {
+                  borderRadius: 16,
+                },
+                propsForDots: {
+                  r: '4',
+                },
+                propsForBackgroundLines: {
+                  strokeDasharray: '',
+                  stroke: '#f0f0f0',
+                  strokeWidth: 1,
+                },
+                propsForLabels: {
+                  fontSize: 11,
+                  fontFamily: 'System',
+                  fontWeight: '400',
+                },
+              }}
+              bezier
+              withInnerLines={false}
               withOuterLines={false}
               withVerticalLines={false}
               withHorizontalLines={true}
@@ -305,6 +418,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
+    marginBottom: 16,
   },
   timeRangeContainer: {
     flexDirection: 'row',
@@ -323,7 +437,7 @@ const styles = StyleSheet.create({
   chartCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 16,
+    marginBottom: 16,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
