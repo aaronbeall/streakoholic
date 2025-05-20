@@ -16,6 +16,9 @@ interface TaskCardProps {
   onPress: () => void;
   onComplete: () => void;
   size: number;
+  onLongPressCalendar?: () => void;
+  onLongPressStats?: () => void;
+  onLongPressTask?: () => void;
 }
 
 type CardSide = 'task' | 'calendar' | 'stats';
@@ -221,7 +224,15 @@ const StatsView: React.FC<{ task: Task }> = ({ task }) => {
   );
 };
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete, size }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ 
+  task, 
+  onPress, 
+  onComplete, 
+  size,
+  onLongPressCalendar,
+  onLongPressStats,
+  onLongPressTask,
+}) => {
   const flipAnim = useRef(new Animated.Value(0)).current;
   const [sides, setSides] = useState<[CardSide, CardSide]>(['task', 'calendar']);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -291,9 +302,26 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, onComplete, s
     }
   };
 
+  const handleLongPress = () => {
+    const visibleSide = isFlipped ? sides[1] : sides[0];
+    if (visibleSide === 'calendar' && onLongPressCalendar) {
+      onLongPressCalendar();
+    } else if (visibleSide === 'stats' && onLongPressStats) {
+      onLongPressStats();
+    } else if (visibleSide === 'task' && onLongPressTask) {
+      onLongPressTask();
+    }
+  };
+
   return (
     <View style={[styles.container, { width: size, height: size }]}>
-      <TouchableOpacity onPress={flipCard} activeOpacity={0.9} style={styles.touchable}>
+      <TouchableOpacity 
+        onPress={flipCard} 
+        onLongPress={handleLongPress}
+        delayLongPress={500}
+        activeOpacity={0.9} 
+        style={styles.touchable}
+      >
         <Animated.View style={[styles.card, frontAnimatedStyle]}>
           {renderContent(sides[0])}
         </Animated.View>

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Task, TaskCompletion, TaskStats } from '../types';
 
 interface TaskContextType {
@@ -7,7 +7,8 @@ interface TaskContextType {
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateTask: (task: Task) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
-  completeTask: (taskId: string) => Promise<void>;
+  completeTask: (taskId: string, date?: Date) => Promise<void>;
+  uncompleteTask: (taskId: string, date: Date) => Promise<void>;
   getTaskStats: (taskId: string) => TaskStats;
 }
 
@@ -70,34 +71,45 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await saveTasks(updatedTasks);
   };
 
-  const completeTask = async (taskId: string) => {
+  const completeTask = async (taskId: string, date: Date = new Date()) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const dateString = date.toISOString();
     const completion: TaskCompletion = {
       id: Date.now().toString(),
       taskId,
-      date: today,
+      date: dateString,
       completedAt: new Date().toISOString(),
       timesCompleted: 1,
     };
+    const newCompletions = [...(task.completions || []), completion];
+    
+    const updatedTask = {
+      ...task,
+      completions: newCompletions,
+      stats: calculateTaskStats(newCompletions),
+    };
 
-    const updatedTasks = tasks.map(t => {
-      if (t.id === taskId) {
-        const completions = [...(t.completions || []), completion];
-        const stats = calculateTaskStats(completions);
-        return {
-          ...t,
-          completions,
-          stats,
-          updatedAt: new Date().toISOString(),
-        };
-      }
-      return t;
-    });
+    await updateTask(updatedTask);
+  };
 
-    await saveTasks(updatedTasks);
+  const uncompleteTask = async (taskId: string, date: Date) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const dateString = date.toISOString();
+    const newCompletions = (task.completions || []).filter(
+      completion => completion.date !== dateString
+    );
+    
+    const updatedTask = {
+      ...task,
+      completions: newCompletions,
+      stats: calculateTaskStats(newCompletions),
+    };
+
+    await updateTask(updatedTask);
   };
 
   const calculateTaskStats = (completions: TaskCompletion[]): TaskStats => {
@@ -169,6 +181,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateTask,
         deleteTask,
         completeTask,
+        uncompleteTask,
         getTaskStats,
       }}
     >
