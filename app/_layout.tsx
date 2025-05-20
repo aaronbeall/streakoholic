@@ -39,6 +39,28 @@ export default function Layout() {
             headerShadowVisible: false,
           }}
         />
+        <Stack.Screen
+          name="task-calendar"
+          options={{
+            title: 'Task Calendar',
+            presentation: 'modal',
+            headerStyle: {
+              backgroundColor: '#fff',
+            },
+            headerShadowVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="task-stats"
+          options={{
+            title: 'Task Stats',
+            presentation: 'modal',
+            headerStyle: {
+              backgroundColor: '#fff',
+            },
+            headerShadowVisible: false,
+          }}
+        />
       </Stack>
     </TaskProvider>
   );

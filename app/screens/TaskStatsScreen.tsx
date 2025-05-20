@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { startOfWeek, subDays } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTaskContext } from '../context/TaskContext';
 
 export default function TaskStatsScreen() {
@@ -61,10 +61,10 @@ export default function TaskStatsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.title}>{task.name}</Text>
+        <View style={styles.titleContainer}>
+          <MaterialCommunityIcons name={task.icon} size={24} color={task.color} />
+          <Text style={styles.title}>{task.name}</Text>
+        </View>
       </View>
 
       <ScrollView style={styles.content}>
@@ -165,14 +165,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  backButton: {
-    padding: 8,
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   title: {
     fontSize: 20,
     fontWeight: '600',
     color: '#333',
-    marginTop: 8,
+    marginLeft: 8,
   },
   content: {
     flex: 1,

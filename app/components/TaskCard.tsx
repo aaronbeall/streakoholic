@@ -23,7 +23,7 @@ interface TaskCardProps {
 
 type CardSide = 'task' | 'calendar' | 'stats';
 
-const TaskView: React.FC<{ task: Task }> = ({ task }) => {
+const CardTask: React.FC<{ task: Task }> = ({ task }) => {
   const getStreakBadgeStyle = () => {
     const currentStreak = task.stats?.currentStreak || 0;
     const lastCompleted = task.stats?.lastCompleted;
@@ -68,7 +68,7 @@ const TaskView: React.FC<{ task: Task }> = ({ task }) => {
   );
 };
 
-const CalendarView: React.FC<{ task: Task }> = ({ task }) => {
+const CardCalendar: React.FC<{ task: Task }> = ({ task }) => {
   const today = new Date();
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -141,7 +141,7 @@ const CalendarView: React.FC<{ task: Task }> = ({ task }) => {
   );
 };
 
-const StatsView: React.FC<{ task: Task }> = ({ task }) => {
+const CardStats: React.FC<{ task: Task }> = ({ task }) => {
   const getWeeklyStats = () => {
     const today = new Date();
     const weekStart = startOfWeek(today);
@@ -294,11 +294,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const renderContent = (side: CardSide) => {
     switch (side) {
       case 'task':
-        return <TaskView task={task} />;
+        return <CardTask task={task} />;
       case 'calendar':
-        return <CalendarView task={task} />;
+        return <CardCalendar task={task} />;
       case 'stats':
-        return <StatsView task={task} />;
+        return <CardStats task={task} />;
     }
   };
 

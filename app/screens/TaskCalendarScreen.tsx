@@ -51,10 +51,10 @@ export default function TaskCalendarScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.title}>{task.name}</Text>
+        <View style={styles.titleContainer}>
+          <MaterialCommunityIcons name={task.icon} size={24} color={task.color} />
+          <Text style={styles.title}>{task.name}</Text>
+        </View>
         <View style={styles.navigation}>
           <TouchableOpacity onPress={handlePrevMonth} style={styles.navButton}>
             <MaterialCommunityIcons name="chevron-left" size={24} color="#333" />
@@ -114,14 +114,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  backButton: {
-    padding: 8,
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   title: {
     fontSize: 20,
     fontWeight: '600',
     color: '#333',
-    marginTop: 8,
+    marginLeft: 8,
   },
   navigation: {
     flexDirection: 'row',
