@@ -28,11 +28,8 @@ const CardTask: React.FC<{ task: Task }> = ({ task }) => {
     const currentStreak = task.stats?.currentStreak || 0;
     const lastCompleted = task.stats?.lastCompleted;
     
-    if (!lastCompleted) {
-      return {
-        backgroundColor: '#6B8AFE',
-        icon: 'sleep' as const,
-      };
+    if (!currentStreak || !lastCompleted) {
+      return null;
     }
 
     const lastCompletedDate = parseISO(lastCompleted);
@@ -58,12 +55,14 @@ const CardTask: React.FC<{ task: Task }> = ({ task }) => {
         <MaterialCommunityIcons name={task.icon} size={64} color="#fff" />
       </View>
       <Text style={styles.taskName} numberOfLines={1}>{task.name}</Text>
-      <View style={styles.streakBadge}>
-        <View style={[styles.streakBubble, { backgroundColor: streakBadgeStyle.backgroundColor }]}>
-          <MaterialCommunityIcons name={streakBadgeStyle.icon} size={14} color="#fff" />
-          <Text style={styles.streakText}>{task.stats?.currentStreak || 0}</Text>
+      {streakBadgeStyle && (
+        <View style={styles.streakBadge}>
+          <View style={[styles.streakBubble, { backgroundColor: streakBadgeStyle.backgroundColor }]}>
+            <MaterialCommunityIcons name={streakBadgeStyle.icon} size={14} color="#fff" />
+            <Text style={styles.streakText}>{task.stats?.currentStreak || 0}</Text>
+          </View>
         </View>
-      </View>
+      )}
     </View>
   );
 };
