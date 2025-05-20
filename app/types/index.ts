@@ -12,6 +12,8 @@ export interface Task {
   duration: number;
   createdAt: string;
   updatedAt: string;
+  stats?: TaskStats;
+  completions?: TaskCompletion[];
 }
 
 export interface TaskCompletion {

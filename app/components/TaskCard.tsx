@@ -80,10 +80,12 @@ const CardCalendar: React.FC<{ task: Task }> = ({ task }) => {
   // Create array of all days in the month
   const days = Array.from({ length: daysInMonth }, (_, i) => {
     const date = new Date(today.getFullYear(), today.getMonth(), i + 1);
-    const isCompleted = task.completions?.some(completion => 
-      isToday(parseISO(completion.date)) && 
-      parseISO(completion.date).getDate() === date.getDate()
-    );
+    const isCompleted = task.completions?.some(completion => {
+      const completionDate = new Date(completion.date);
+      return completionDate.getFullYear() === date.getFullYear() &&
+             completionDate.getMonth() === date.getMonth() &&
+             completionDate.getDate() === date.getDate();
+    });
     return {
       date,
       isCompleted,

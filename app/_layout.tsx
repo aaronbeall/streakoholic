@@ -33,6 +33,7 @@ export default function Layout() {
           name="task-details"
           options={{
             title: 'Task Details',
+            presentation: 'modal',
             headerStyle: {
               backgroundColor: '#fff',
             },
