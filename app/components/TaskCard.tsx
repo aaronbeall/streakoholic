@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { addDays, isToday, parseISO, startOfWeek } from 'date-fns';
+import { addDays, format, getDay, getDaysInMonth, isToday, parseISO, startOfMonth, startOfWeek } from 'date-fns';
 import React, { useRef, useState } from 'react';
 import {
   Animated,
@@ -69,59 +69,24 @@ const CardTask: React.FC<{ task: Task }> = ({ task }) => {
 };
 
 const CardCalendar: React.FC<{ task: Task }> = ({ task }) => {
-  const today = new Date();
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  const daysInMonth = endOfMonth.getDate();
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const currentMonth = new Date();
+  const daysInMonth = getDaysInMonth(currentMonth);
+  const firstDayOfMonth = startOfMonth(currentMonth);
+  const startingDayOfWeek = getDay(firstDayOfMonth);
   
-  // Get the day of week for the first day of the month (0 = Sunday, 6 = Saturday)
-  const firstDayOfWeek = startOfMonth.getDay();
-  
-  // Create array of all days in the month
   const days = Array.from({ length: daysInMonth }, (_, i) => {
-    const date = new Date(today.getFullYear(), today.getMonth(), i + 1);
-    const isCompleted = task.completions?.some(completion => {
-      const completionDate = new Date(completion.date);
-      return completionDate.getFullYear() === date.getFullYear() &&
-             completionDate.getMonth() === date.getMonth() &&
-             completionDate.getDate() === date.getDate();
-    });
+    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i + 1);
+    const dateString = format(date, 'yyyy-MM-dd');
+    const isCompleted = task.completions?.some(completion => completion.date === dateString);
+    const isToday = dateString === today;
     return {
       date,
       isCompleted,
-      isPast: date < today,
-      isFuture: date > today,
-      isToday: isToday(date)
+      isToday,
+      dayNumber: i + 1
     };
   });
-
-  // Create grid array with empty cells for start of month
-  const gridDays = [
-    ...Array(firstDayOfWeek).fill(null),
-    ...days
-  ];
-
-  const renderDay = ({ item: day, index }: { item: typeof days[0] | null, index: number }) => (
-    <View style={styles.calendarDay}>
-      {day ? (
-        <View style={styles.calendarDayInner}>
-          {day.isCompleted ? (
-            // Completed day (past or current) - show filled colored circle
-            <View style={[styles.calendarDot, { backgroundColor: task.color }]} />
-          ) : day.isToday ? (
-            // Current day incomplete - show colored border circle
-            <View style={[styles.calendarDot, { borderWidth: 2, borderColor: task.color, backgroundColor: 'transparent' }]} />
-          ) : day.isPast ? (
-            // Past incomplete day - show X
-            <Text style={styles.calendarX}>×</Text>
-          ) : (
-            // Future day - show gray circle
-            <View style={[styles.calendarDot, styles.calendarDotFuture]} />
-          )}
-        </View>
-      ) : null}
-    </View>
-  );
 
   return (
     <View style={styles.calendarContainer}>
@@ -132,8 +97,25 @@ const CardCalendar: React.FC<{ task: Task }> = ({ task }) => {
           ))}
         </View>
         <FlatList
-          data={gridDays}
-          renderItem={renderDay}
+          data={[
+            ...Array(startingDayOfWeek).fill(null),
+            ...days
+          ]}
+          renderItem={({ item: day, index }) => (
+            <View style={styles.calendarDay}>
+              {day ? (
+                <View style={styles.calendarDayInner}>
+                  {day.isCompleted ? (
+                    <View style={[styles.calendarDot, { backgroundColor: task.color }]} />
+                  ) : day.isToday ? (
+                    <View style={[styles.calendarDot, { borderWidth: 2, borderColor: task.color, backgroundColor: 'transparent' }]} />
+                  ) : (
+                    <View style={[styles.calendarDot, styles.calendarDotFuture]} />
+                  )}
+                </View>
+              ) : null}
+            </View>
+          )}
           numColumns={7}
           scrollEnabled={false}
           keyExtractor={(_, index) => index.toString()}

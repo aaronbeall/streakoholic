@@ -27,6 +27,8 @@ export default function TaskDetailsScreen() {
     });
   };
 
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content}>
@@ -55,25 +57,36 @@ export default function TaskDetailsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Statistics</Text>
+          <Text style={styles.sectionTitle}>Frequency</Text>
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Current Streak</Text>
-              <Text style={styles.infoValue}>{task.stats?.currentStreak || 0}</Text>
+              <Text style={styles.infoLabel}>Days of Week</Text>
+              <View style={styles.daysContainer}>
+                {weekDays.map((day, index) => (
+                  <View
+                    key={day}
+                    style={[
+                      styles.dayChip,
+                      task.daysOfWeek.includes(index) && { backgroundColor: task.color }
+                    ]}
+                  >
+                    <Text style={[
+                      styles.dayText,
+                      task.daysOfWeek.includes(index) && styles.selectedDayText
+                    ]}>
+                      {day[0]}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Best Streak</Text>
-              <Text style={styles.infoValue}>{task.stats?.bestStreak || 0}</Text>
+              <Text style={styles.infoLabel}>Times Per Day</Text>
+              <Text style={styles.infoValue}>{task.timesPerDay}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Total Completions</Text>
-              <Text style={styles.infoValue}>{task.stats?.totalCompletions || 0}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Last Completed</Text>
-              <Text style={styles.infoValue}>
-                {task.stats?.lastCompleted ? new Date(task.stats.lastCompleted).toLocaleDateString() : 'Never'}
-              </Text>
+              <Text style={styles.infoLabel}>Duration</Text>
+              <Text style={styles.infoValue}>{task.duration} minutes</Text>
             </View>
           </View>
         </View>
@@ -152,6 +165,26 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
+  },
+  daysContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dayChip: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dayText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  selectedDayText: {
+    color: '#fff',
   },
   actions: {
     gap: 12,

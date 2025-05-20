@@ -19,15 +19,17 @@ export default function TaskCalendarScreen() {
   const daysInMonth = getDaysInMonth(currentMonth);
   const firstDayOfMonth = startOfMonth(currentMonth);
   const startingDayOfWeek = getDay(firstDayOfMonth);
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   const days = Array.from({ length: daysInMonth }, (_, i) => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i + 1);
-    const isCompleted = task.completions?.some(completion => 
-      new Date(completion.date).toDateString() === date.toDateString()
-    );
+    const dateString = format(date, 'yyyy-MM-dd');
+    const isCompleted = task.completions?.some(completion => completion.date === dateString);
+    const isToday = dateString === today;
     return {
       date,
       isCompleted,
+      isToday,
       dayNumber: i + 1
     };
   });
@@ -76,9 +78,9 @@ export default function TaskCalendarScreen() {
           {Array(startingDayOfWeek).fill(null).map((_, index) => (
             <View key={`empty-${index}`} style={styles.day} />
           ))}
-          {days.map(({ date, isCompleted, dayNumber }) => (
+          {days.map(({ date, isCompleted, isToday, dayNumber }) => (
             <TouchableOpacity
-              key={date.toISOString()}
+              key={format(date, 'yyyy-MM-dd')}
               style={styles.day}
               onPress={() => handleDayPress(date)}
               onLongPress={() => handleDayLongPress(date)}
@@ -86,11 +88,13 @@ export default function TaskCalendarScreen() {
             >
               <View style={[
                 styles.dayContent,
-                isCompleted && { backgroundColor: task.color }
+                isCompleted && { backgroundColor: task.color },
+                isToday && !isCompleted && { borderWidth: 2, borderColor: task.color }
               ]}>
                 <Text style={[
                   styles.dayNumber,
-                  isCompleted && styles.completedDayNumber
+                  isCompleted && styles.completedDayNumber,
+                  isToday && !isCompleted && { color: task.color }
                 ]}>
                   {dayNumber}
                 </Text>
