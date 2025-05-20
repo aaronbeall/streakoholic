@@ -131,8 +131,8 @@ export default function TaskStatsScreen() {
     const colorObj = tinycolor(color);
     return tinycolor({
       h: colorObj.toHsl().h,
-      s: 15,
-      l: 95
+      s: 90,
+      l: 98
     }).toString();
   };
 
@@ -299,7 +299,7 @@ export default function TaskStatsScreen() {
                 },
                 propsForBackgroundLines: {
                   strokeDasharray: '',
-                  stroke: '#f0f0f0',
+                  stroke: 'rgba(0,0,0,0)',
                   strokeWidth: 1,
                 },
               }}
