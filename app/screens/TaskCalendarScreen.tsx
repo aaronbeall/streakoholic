@@ -52,11 +52,19 @@ export default function TaskCalendarScreen() {
   });
 
   const handleDayPress = (date: Date) => {
-    completeTask(taskId, date);
-  };
-
-  const handleDayLongPress = (date: Date) => {
-    uncompleteTask(taskId, date);
+    const dateString = format(date, 'yyyy-MM-dd');
+    const isCompleted = task.completions?.some(completion => completion.date === dateString);
+    const isFuture = dateString > today;
+    
+    if (isFuture) {
+      return; // Don't allow completing future dates
+    }
+    
+    if (isCompleted) {
+      uncompleteTask(taskId, date);
+    } else {
+      completeTask(taskId, date);
+    }
   };
 
   const handlePrevMonth = () => {
@@ -123,10 +131,9 @@ export default function TaskCalendarScreen() {
                 key={dateString}
                 style={styles.day}
                 onPress={() => handleDayPress(date)}
-                onLongPress={() => handleDayLongPress(date)}
                 delayLongPress={500}
               >
-                <View style={[
+                <View key={ `${task.id}-${isCompleted}` } style={[
                   styles.dayContent,
                   isCompleted && { backgroundColor: task.color },
                   isToday && !isCompleted && { borderWidth: 2, borderColor: task.color }

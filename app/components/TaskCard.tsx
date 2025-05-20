@@ -4,9 +4,9 @@ import React, { useRef, useState } from 'react';
 import {
   Animated,
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { Task } from '../types';
@@ -236,8 +236,27 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onLongPressTask,
 }) => {
   const flipAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
   const [sides, setSides] = useState<[CardSide, CardSide]>(['task', 'calendar']);
   const [isFlipped, setIsFlipped] = useState(false);
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4
+    }).start();
+  };
 
   const flipCard = () => {
     const nextSides: [CardSide, CardSide] = [...sides];
@@ -279,8 +298,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           outputRange: ['0deg', '180deg'],
         }),
       },
+      { scale: scaleAnim }
     ],
-    transformOrigin: 'center',
   };
 
   const backAnimatedStyle = {
@@ -291,8 +310,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           outputRange: ['180deg', '360deg'],
         }),
       },
+      { scale: scaleAnim }
     ],
-    transformOrigin: 'center',
   };
 
   const renderContent = (side: CardSide) => {
@@ -319,11 +338,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
-      <TouchableOpacity 
+      <Pressable 
         onPress={flipCard} 
         onLongPress={handleLongPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         delayLongPress={500}
-        activeOpacity={0.9} 
         style={styles.touchable}
       >
         <Animated.View style={[styles.card, frontAnimatedStyle]}>
@@ -333,7 +353,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <Animated.View style={[styles.card, styles.cardBack, backAnimatedStyle]}>
           {renderContent(sides[1])}
         </Animated.View>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 };
