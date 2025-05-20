@@ -30,6 +30,7 @@ const calculateTaskStats = (completions: TaskCompletion[]): TaskStats => {
       totalCompletions: 0,
       completionRate: 0,
       lastCompleted: undefined,
+      lastStreak: 0,
     };
   }
 
@@ -59,9 +60,12 @@ const calculateTaskStats = (completions: TaskCompletion[]): TaskStats => {
     }
   }
 
-  // Calculate best streak
+  // Calculate best streak and last streak
   let bestStreak = 0;
+  let lastStreak = 0;
   let tempStreak = 1;
+  let foundLastStreak = false;
+
   for (let i = 1; i < sortedCompletions.length; i++) {
     const currentDate = new Date(sortedCompletions[i - 1].date);
     const prevDate = new Date(sortedCompletions[i].date);
@@ -71,10 +75,17 @@ const calculateTaskStats = (completions: TaskCompletion[]): TaskStats => {
       tempStreak++;
       bestStreak = Math.max(bestStreak, tempStreak);
     } else {
+      if (!foundLastStreak) {
+        lastStreak = tempStreak;
+        foundLastStreak = true;
+      }
       tempStreak = 1;
     }
   }
   bestStreak = Math.max(bestStreak, tempStreak);
+  if (!foundLastStreak) {
+    lastStreak = tempStreak;
+  }
 
   const totalCompletions = completions.reduce((sum, c) => sum + c.timesCompleted, 0);
   const completionRate = totalCompletions / (completions.length * 7); // Assuming 7 days per week
@@ -85,6 +96,7 @@ const calculateTaskStats = (completions: TaskCompletion[]): TaskStats => {
     totalCompletions,
     completionRate,
     lastCompleted: sortedCompletions[0].date,
+    lastStreak,
   };
 };
 

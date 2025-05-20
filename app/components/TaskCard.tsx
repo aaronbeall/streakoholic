@@ -26,25 +26,39 @@ type CardSide = 'task' | 'calendar' | 'stats';
 const CardTask: React.FC<{ task: Task }> = ({ task }) => {
   const getStreakBadgeStyle = () => {
     const currentStreak = task.stats?.currentStreak || 0;
+    const lastStreak = task.stats?.lastStreak || 0;
     const lastCompleted = task.stats?.lastCompleted;
     
-    if (!currentStreak || !lastCompleted) {
+    if (!lastCompleted) {
       return null;
     }
 
     const lastCompletedDate = parseISO(lastCompleted);
     
-    if (isToday(lastCompletedDate)) {
+    if (currentStreak > 0) {
+      if (isToday(lastCompletedDate)) {
+        return {
+          backgroundColor: '#FF6B6B',
+          icon: 'fire' as const,
+          value: currentStreak,
+        };
+      }
       return {
-        backgroundColor: '#FF6B6B',
-        icon: 'fire' as const,
+        backgroundColor: '#FFA726',
+        icon: 'clock-outline' as const,
+        value: currentStreak,
       };
     }
 
-    return {
-      backgroundColor: '#FFA726',
-      icon: 'clock-outline' as const,
-    };
+    if (lastStreak > 0) {
+      return {
+        backgroundColor: '#90A4AE',
+        icon: 'sleep' as const,
+        value: lastStreak,
+      };
+    }
+
+    return null;
   };
 
   const streakBadgeStyle = getStreakBadgeStyle();
@@ -59,7 +73,7 @@ const CardTask: React.FC<{ task: Task }> = ({ task }) => {
         <View style={styles.streakBadge}>
           <View style={[styles.streakBubble, { backgroundColor: streakBadgeStyle.backgroundColor }]}>
             <MaterialCommunityIcons name={streakBadgeStyle.icon} size={14} color="#fff" />
-            <Text style={styles.streakText}>{task.stats?.currentStreak || 0}</Text>
+            <Text style={styles.streakText}>{streakBadgeStyle.value}</Text>
           </View>
         </View>
       )}
@@ -266,6 +280,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         }),
       },
     ],
+    transformOrigin: 'center',
   };
 
   const backAnimatedStyle = {
@@ -277,6 +292,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         }),
       },
     ],
+    transformOrigin: 'center',
   };
 
   const renderContent = (side: CardSide) => {

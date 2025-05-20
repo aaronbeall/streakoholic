@@ -210,6 +210,11 @@ export default function TaskStatsScreen() {
             <Text style={styles.statLabel}>Best Streak</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
+            <MaterialCommunityIcons name="history" size={24} color="#9C27B0" />
+            <Text style={[styles.statNumber, { color: '#9C27B0' }]}>{task.stats?.lastStreak || 0}</Text>
+            <Text style={styles.statLabel}>Last Streak</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
             <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50" />
             <Text style={[styles.statNumber, { color: '#4CAF50' }]}>{task.stats?.totalCompletions || 0}</Text>
             <Text style={styles.statLabel}>Total Completions</Text>

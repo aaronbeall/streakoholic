@@ -30,6 +30,7 @@ export interface TaskStats {
   totalCompletions: number;
   completionRate: number;
   lastCompleted?: string;
+  lastStreak: number;
 }
 
 export interface TaskWithStats extends Task {
