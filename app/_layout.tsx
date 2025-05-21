@@ -32,34 +32,22 @@ export default function Layout() {
         <Stack.Screen
           name="task-details"
           options={{
-            title: 'Task Details',
+            headerShown: false,
             presentation: 'modal',
-            headerStyle: {
-              backgroundColor: '#fff',
-            },
-            headerShadowVisible: false,
           }}
         />
         <Stack.Screen
           name="task-calendar"
           options={{
-            title: 'Task Calendar',
+            headerShown: false,
             presentation: 'modal',
-            headerStyle: {
-              backgroundColor: '#fff',
-            },
-            headerShadowVisible: false,
           }}
         />
         <Stack.Screen
           name="task-stats"
           options={{
-            title: 'Task Stats',
+            headerShown: false,
             presentation: 'modal',
-            headerStyle: {
-              backgroundColor: '#fff',
-            },
-            headerShadowVisible: false,
           }}
         />
       </Stack>

@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { TaskHeader } from '../components/TaskHeader';
 import { useTaskContext } from '../context/TaskContext';
 
 export default function TaskDetailsScreen() {
@@ -31,6 +32,8 @@ export default function TaskDetailsScreen() {
 
   return (
     <View style={styles.container}>
+      <TaskHeader task={task} />
+
       <ScrollView style={styles.content}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Task Information</Text>

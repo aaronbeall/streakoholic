@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BarChart, LineChart } from 'react-native-chart-kit';
 import tinycolor from 'tinycolor2';
+import { TaskHeader } from '../components/TaskHeader';
 import { useTaskContext } from '../context/TaskContext';
 
 type TimeRange = 'week' | 'month' | 'year' | 'all';
@@ -190,29 +191,27 @@ export default function TaskStatsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <MaterialCommunityIcons name={task.icon} size={24} color={task.color} />
-          <Text style={styles.title}>{task.name}</Text>
-        </View>
-      </View>
+      <TaskHeader task={task} />
 
       <ScrollView style={styles.content}>
         <View style={styles.statsGrid}>
-          <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
-            <MaterialCommunityIcons name="fire" size={24} color="#FF6B6B" />
-            <Text style={[styles.statNumber, { color: '#FF6B6B' }]}>{task.stats?.currentStreak || 0}</Text>
-            <Text style={styles.statLabel}>Current Streak</Text>
-          </View>
+          {task.stats?.currentStreak ? (
+            <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
+              <MaterialCommunityIcons name="fire" size={24} color="#FF6B6B" />
+              <Text style={[styles.statNumber, { color: '#FF6B6B' }]}>{task.stats.currentStreak}</Text>
+              <Text style={styles.statLabel}>Current Streak</Text>
+            </View>
+          ) : task.stats?.lastStreak ? (
+            <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
+              <MaterialCommunityIcons name="sleep" size={24} color="#90A4AE" />
+              <Text style={[styles.statNumber, { color: '#90A4AE' }]}>{task.stats.lastStreak}</Text>
+              <Text style={styles.statLabel}>Last Streak</Text>
+            </View>
+          ) : null}
           <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
             <MaterialCommunityIcons name="trophy" size={24} color="#FFD700" />
             <Text style={[styles.statNumber, { color: '#FFD700' }]}>{task.stats?.bestStreak || 0}</Text>
             <Text style={styles.statLabel}>Best Streak</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
-            <MaterialCommunityIcons name="history" size={24} color="#9C27B0" />
-            <Text style={[styles.statNumber, { color: '#9C27B0' }]}>{task.stats?.lastStreak || 0}</Text>
-            <Text style={styles.statLabel}>Last Streak</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
             <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50" />
@@ -221,9 +220,7 @@ export default function TaskStatsScreen() {
           </View>
           <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
             <MaterialCommunityIcons name="chart-line" size={24} color="#2196F3" />
-            <Text style={[styles.statNumber, { color: '#2196F3' }]}>
-              {Math.round((task.stats?.completionRate || 0) * 100)}%
-            </Text>
+            <Text style={[styles.statNumber, { color: '#2196F3' }]}>{Math.round((task.stats?.completionRate || 0) * 100)}%</Text>
             <Text style={styles.statLabel}>Completion Rate</Text>
           </View>
         </View>
@@ -364,22 +361,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-  },
-  header: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 8,
   },
   content: {
     flex: 1,
