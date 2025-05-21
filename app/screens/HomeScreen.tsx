@@ -1,9 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FlatList,
   StyleSheet,
+  Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -14,10 +15,110 @@ import { useTaskContext } from '../context/TaskContext';
 const GRID_SPACING = 16;
 const SIDE_PADDING = 16;
 
+type FilterType = 'up_to_date' | 'expiring' | null;
+
+const HomeHeader: React.FC<{ onFilterChange: (filter: FilterType) => void }> = ({ onFilterChange }) => {
+  const router = useRouter();
+  const { tasks } = useTaskContext();
+  const [activeFilter, setActiveFilter] = useState<FilterType>(null);
+
+  const streakStats = tasks.reduce((acc, task) => {
+    if (task.stats?.streakStatus === 'up_to_date' && task.stats.currentStreak > 0) {
+      acc.upToDate++;
+    } else if (task.stats?.streakStatus === 'expiring' && task.stats.currentStreak > 0) {
+      acc.expiring++;
+    }
+    return acc;
+  }, { upToDate: 0, expiring: 0 });
+
+  const handleFilterPress = (filter: FilterType) => {
+    const newFilter = activeFilter === filter ? null : filter;
+    setActiveFilter(newFilter);
+    onFilterChange(newFilter);
+  };
+
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity 
+        style={styles.headerButton}
+        onPress={() => router.push('/')}
+      >
+        <MaterialCommunityIcons name="view-dashboard" size={24} color="#333" />
+      </TouchableOpacity>
+
+      <View style={styles.streakBubbles}>
+        {streakStats.upToDate > 0 && (
+          <TouchableOpacity 
+            style={[
+              styles.streakBubble, 
+              { backgroundColor: 'rgba(255, 59, 48, 0.1)' },
+              activeFilter === 'up_to_date' && { backgroundColor: '#FF3B30' }
+            ]}
+            onPress={() => handleFilterPress('up_to_date')}
+          >
+            <MaterialCommunityIcons 
+              name="fire" 
+              size={16} 
+              color={activeFilter === 'up_to_date' ? '#fff' : '#FF3B30'} 
+            />
+            <Text style={[
+              styles.streakBubbleText, 
+              { color: activeFilter === 'up_to_date' ? '#fff' : '#FF3B30' }
+            ]}>
+              {streakStats.upToDate}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {streakStats.expiring > 0 && (
+          <TouchableOpacity 
+            style={[
+              styles.streakBubble, 
+              { backgroundColor: 'rgba(255, 167, 38, 0.1)' },
+              activeFilter === 'expiring' && { backgroundColor: '#FFA726' }
+            ]}
+            onPress={() => handleFilterPress('expiring')}
+          >
+            <MaterialCommunityIcons 
+              name="clock-outline" 
+              size={16} 
+              color={activeFilter === 'expiring' ? '#fff' : '#FFA726'} 
+            />
+            <Text style={[
+              styles.streakBubbleText, 
+              { color: activeFilter === 'expiring' ? '#fff' : '#FFA726' }
+            ]}>
+              {streakStats.expiring}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <TouchableOpacity 
+        style={styles.headerButton}
+        onPress={() => router.push('/')}
+      >
+        <MaterialCommunityIcons name="cog" size={24} color="#333" />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { tasks, completeTask } = useTaskContext();
   const { width } = useWindowDimensions();
+  const [filter, setFilter] = useState<FilterType>(null);
+
+  const filteredTasks = tasks.filter(task => {
+    if (!filter) return true;
+    if (filter === 'up_to_date') {
+      return task.stats?.streakStatus === 'up_to_date' && task.stats.currentStreak > 0;
+    }
+    if (filter === 'expiring') {
+      return task.stats?.streakStatus === 'expiring' && task.stats.currentStreak > 0;
+    }
+    return true;
+  });
 
   const getColumnCount = () => {
     if (width >= 1200) return 4;
@@ -31,9 +132,10 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <HomeHeader onFilterChange={setFilter} />
       <FlatList
         key={columnCount}
-        data={tasks}
+        data={filteredTasks}
         keyExtractor={(item) => item.id}
         numColumns={columnCount}
         columnWrapperStyle={styles.row}
@@ -72,6 +174,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 48,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakBubbles: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  streakBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  streakBubbleText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   listContent: {
     padding: SIDE_PADDING,

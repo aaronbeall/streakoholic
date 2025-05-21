@@ -8,14 +8,7 @@ export default function Layout() {
         <Stack.Screen
           name="index"
           options={{
-            title: 'Streakaholic',
-            headerStyle: {
-              backgroundColor: '#fff',
-            },
-            headerShadowVisible: false,
-            headerTitleStyle: {
-              fontWeight: 'bold',
-            },
+            headerShown: false,
           }}
         />
         <Stack.Screen
