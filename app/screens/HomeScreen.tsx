@@ -41,7 +41,7 @@ const HomeHeader: React.FC<{ onFilterChange: (filter: FilterType) => void }> = (
     <View style={styles.header}>
       <TouchableOpacity 
         style={styles.headerButton}
-        onPress={() => router.push('/')}
+        onPress={() => router.push({ pathname: '/dashboard' })}
       >
         <MaterialCommunityIcons name="view-dashboard" size={24} color="#333" />
       </TouchableOpacity>

@@ -12,6 +12,12 @@ export default function Layout() {
           }}
         />
         <Stack.Screen
+          name="dashboard"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           name="add-task"
           options={{
             title: 'Add New Task',
