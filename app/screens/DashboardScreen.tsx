@@ -10,7 +10,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
+import { BarChart, LineChart } from 'react-native-chart-kit';
 import { useTaskContext } from '../context/TaskContext';
 import { TaskStats } from '../types/Task';
 
@@ -319,6 +319,75 @@ export const DashboardScreen: React.FC = () => {
     return `${format(start, 'MMM d, yyyy')} - ${format(end, 'MMM d, yyyy')}`;
   };
 
+  const getCompletionPatterns = () => {
+    const dayOfWeekData = Array(7).fill(0);
+    const hourOfDayData = Array(24).fill(0);
+    const today = new Date();
+    let startDate: Date;
+
+    // Set start date based on time range
+    switch (selectedTimeFrame) {
+      case 'week':
+        startDate = subDays(today, 6);
+        break;
+      case 'month':
+        startDate = subDays(today, 29);
+        break;
+      case 'year':
+        startDate = subMonths(today, 11);
+        break;
+      case 'all':
+        // Find first completion date
+        const completionDates = filteredTaskData.flatMap(task => 
+          task.completions?.map(c => parseISO(c.date)) || []
+        );
+        startDate = completionDates.length > 0 
+          ? new Date(Math.min(...completionDates.map(d => d.getTime())))
+          : subDays(today, 30);
+        break;
+    }
+
+    filteredTaskData.forEach(task => {
+      task.completions.forEach(completion => {
+        const date = parseISO(completion.date);
+        if (date >= startDate && date <= today) {
+          // Day of week (0 = Sunday, 6 = Saturday)
+          dayOfWeekData[date.getDay()] += completion.timesCompleted;
+          // Hour of day (0-23)
+          hourOfDayData[date.getHours()] += completion.timesCompleted;
+        }
+      });
+    });
+
+    return { dayOfWeekData, hourOfDayData };
+  };
+
+  const { dayOfWeekData, hourOfDayData } = getCompletionPatterns();
+
+  const dayOfWeekLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const hourOfDayLabels = Array.from({ length: 24 }, (_, i) => {
+    if (i % 6 === 0) { // Show every 6 hours
+      const hour = i === 0 || i === 12 ? 12 : i % 12;
+      const ampm = i < 12 ? 'am' : 'pm';
+      return `${hour}${ampm}`;
+    }
+    return '';
+  });
+
+  const dayOfWeekChartData = {
+    labels: dayOfWeekLabels,
+    datasets: [{
+      data: dayOfWeekData,
+    }],
+  };
+
+  const hourOfDayChartData = {
+    labels: hourOfDayLabels,
+    datasets: [{
+      data: hourOfDayData,
+    }],
+  };
+
   return (
     <View style={styles.container}>
       <DashboardHeader
@@ -374,7 +443,84 @@ export const DashboardScreen: React.FC = () => {
           </View>
           <LineChart
             data={chartData}
-            width={width - 32}
+            width={width - 48}
+            height={220}
+            chartConfig={{
+              backgroundColor: '#ffffff',
+              backgroundGradientFrom: '#ffffff',
+              backgroundGradientTo: '#ffffff',
+              decimalPlaces: 0,
+              color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
+              labelColor: (opacity = 1) => '#999',
+              style: {
+                borderRadius: 16,
+              },
+              propsForDots: {
+                r: '4',
+              },
+              propsForBackgroundLines: {
+                strokeDasharray: '',
+                stroke: '#f0f0f0',
+                strokeWidth: 1,
+              },
+              propsForLabels: {
+                fontSize: 11,
+                fontFamily: 'System',
+                fontWeight: '400',
+              },
+              fillShadowGradient: '#007AFF',
+              fillShadowGradientOpacity: 0.2,
+            }}
+            bezier
+            withInnerLines={false}
+            withOuterLines={false}
+            withVerticalLines={false}
+            withHorizontalLines={true}
+            withDots={true}
+            withShadow={true}
+            style={styles.chart}
+          />
+        </View>
+
+        <View style={styles.chartContainer}>
+          <Text style={styles.chartTitle}>Day of Week</Text>
+          <BarChart
+            data={dayOfWeekChartData}
+            width={width - 48}
+            height={220}
+            yAxisLabel=""
+            yAxisSuffix=""
+            chartConfig={{
+              backgroundColor: '#ffffff',
+              backgroundGradientFrom: '#ffffff',
+              backgroundGradientTo: '#ffffff',
+              decimalPlaces: 0,
+              color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
+              labelColor: (opacity = 1) => '#999',
+              style: {
+                borderRadius: 16,
+              },
+              propsForLabels: {
+                fontSize: 11,
+                fontFamily: 'System',
+                fontWeight: '400',
+              },
+              propsForBackgroundLines: {
+                strokeDasharray: '',
+                stroke: 'rgba(0,0,0,0)',
+                strokeWidth: 1,
+              },
+            }}
+            style={styles.chart}
+            fromZero
+          />
+        </View>
+
+        <View style={styles.chartContainer}>
+          <Text style={styles.chartTitle}>Hour of Day</Text>
+          <LineChart
+            data={hourOfDayChartData}
+            width={width - 48}
             height={220}
             chartConfig={{
               backgroundColor: '#ffffff',
@@ -527,6 +673,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     margin: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   chartHeader: {
     flexDirection: 'row',
