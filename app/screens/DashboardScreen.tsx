@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { format, parseISO, startOfDay, subDays, subMonths, subYears } from 'date-fns';
+import { addDays, format, parseISO, startOfDay, subDays, subMonths, subYears } from 'date-fns';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -94,6 +94,7 @@ export const DashboardScreen: React.FC = () => {
   const { width } = useWindowDimensions();
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>('week');
   const [selectedTasks, setSelectedTasks] = useState<string[]>(tasks.map(t => t.id));
+  const [isCumulative, setIsCumulative] = useState(false);
 
   const getDateRange = () => {
     const end = startOfDay(new Date());
@@ -145,7 +146,6 @@ export const DashboardScreen: React.FC = () => {
         if (selectedTimeFrame === 'all') return true;
         
         const completionDate = parseISO(completion.date);
-        console.log({completionDate, start, end})
         return completionDate >= start && completionDate <= end;
       }) || []
     }));
@@ -178,32 +178,122 @@ export const DashboardScreen: React.FC = () => {
   const stats = calculateAggregateStats();
 
   const getChartData = () => {
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    const labels = Array.from({ length: days }, (_, i) => {
-      const date = new Date(start);
-      date.setDate(date.getDate() + i);
-      return format(date, 'MMM d');
-    });
+    const today = new Date();
+    let startDate: Date;
+    let labels: string[] = [];
+    let data: number[] = [];
+    let groupSize = 1; // Default group size
 
-    // Calculate completion history
-    const completionData = Array(days).fill(0);
+    switch (selectedTimeFrame) {
+      case 'week':
+        startDate = subDays(today, 6); // 7 days including today
+        labels = Array.from({ length: 7 }, (_, i) => {
+          const date = subDays(today, i); // Start from today and go backwards
+          return format(date, 'EEE');
+        }).reverse(); // Reverse to maintain left-to-right order
+        data = Array(7).fill(0);
+        break;
+      case 'month':
+        startDate = subDays(today, 29); // 30 days including today
+        labels = Array.from({ length: 30 }, (_, i) => {
+          const date = subDays(today, i); // Start from today and go backwards
+          return i % 5 === 0 ? format(date, 'MMM d') : '';
+        }).reverse(); // Reverse to maintain left-to-right order
+        data = Array(30).fill(0);
+        break;
+      case 'year':
+        startDate = subMonths(today, 11); // 12 months including current month
+        labels = Array.from({ length: 12 }, (_, i) => {
+          const date = subMonths(today, i); // Start from today and go backwards
+          return format(date, 'MMM');
+        }).reverse(); // Reverse to maintain left-to-right order
+        data = Array(12).fill(0);
+        break;
+      case 'all':
+        // Find first and last completion dates
+        const completionDates = filteredTaskData.flatMap(task => 
+          task.completions?.map(c => parseISO(c.date)) || []
+        );
+        if (completionDates.length === 0) {
+          startDate = subDays(today, 30);
+        } else {
+          startDate = new Date(Math.min(...completionDates.map(d => d.getTime())));
+        }
+        
+        const totalDays = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        let dateFormat: string;
+
+        if (totalDays <= 30) {
+          // If less than a month, show daily
+          groupSize = 1;
+          dateFormat = 'MMM d';
+        } else if (totalDays <= 90) {
+          // If less than 3 months, show weekly
+          groupSize = 7;
+          dateFormat = 'MMM d';
+        } else if (totalDays <= 365) {
+          // If less than a year, show monthly
+          groupSize = 30;
+          dateFormat = 'MMM';
+        } else {
+          // If more than a year, show quarterly
+          groupSize = 90;
+          dateFormat = 'MMM yyyy';
+        }
+
+        const numGroups = Math.ceil(totalDays / groupSize);
+        const midPoint = Math.floor(numGroups / 2);
+        
+        labels = Array.from({ length: numGroups }, (_, i) => {
+          if (i === 0 || i === midPoint || i === numGroups - 1) {
+            const date = addDays(startDate, i * groupSize);
+            return format(date, dateFormat);
+          }
+          return '';
+        });
+        data = Array(numGroups).fill(0);
+        break;
+    }
+
     filteredTaskData.forEach(task => {
       task.completions.forEach(completion => {
-        const completionDate = new Date(completion.completedAt);
-        const dayIndex = Math.floor((completionDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-        if (dayIndex >= 0 && dayIndex < days) {
-          completionData[dayIndex]++;
+        const date = parseISO(completion.date);
+        if (date >= startDate && date <= today) {
+          const index = selectedTimeFrame === 'week' 
+            ? 6 - Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+            : selectedTimeFrame === 'month'
+            ? 29 - Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+            : selectedTimeFrame === 'year'
+            ? 11 - Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24 * 30))
+            : Math.floor((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * groupSize));
+          if (index >= 0 && index < data.length) {
+            data[index]++;
+          }
         }
       });
     });
 
-    return {
-      labels,
-      completionData,
-    };
+    // Convert to cumulative if needed
+    if (isCumulative) {
+      let runningTotal = 0;
+      data = data.map(value => {
+        runningTotal += value;
+        return runningTotal;
+      });
+    }
+
+    return { labels, data };
   };
 
-  const chartData = getChartData();
+  const { labels, data } = getChartData();
+  const chartData = {
+    labels,
+    datasets: [{
+      data,
+      color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
+      strokeWidth: 2,
+    }],
+  };
 
   const getDateRangeLabel = () => {
     const { start, end } = getDateRange();
@@ -269,14 +359,21 @@ export const DashboardScreen: React.FC = () => {
         </View>
 
         <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Completion History</Text>
+          <View style={styles.chartHeader}>
+            <Text style={styles.chartTitle}>Activity</Text>
+            <TouchableOpacity
+              style={[styles.cumulativeToggle, isCumulative && styles.cumulativeToggleActive]}
+              onPress={() => setIsCumulative(!isCumulative)}
+            >
+              <MaterialCommunityIcons 
+                name="chart-line-variant" 
+                size={20} 
+                color={isCumulative ? '#fff' : '#666'} 
+              />
+            </TouchableOpacity>
+          </View>
           <LineChart
-            data={{
-              labels: chartData.labels,
-              datasets: [{
-                data: chartData.completionData,
-              }],
-            }}
+            data={chartData}
             width={width - 32}
             height={220}
             chartConfig={{
@@ -285,11 +382,33 @@ export const DashboardScreen: React.FC = () => {
               backgroundGradientTo: '#ffffff',
               decimalPlaces: 0,
               color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
+              labelColor: (opacity = 1) => '#999',
               style: {
                 borderRadius: 16,
               },
+              propsForDots: {
+                r: '4',
+              },
+              propsForBackgroundLines: {
+                strokeDasharray: '',
+                stroke: '#f0f0f0',
+                strokeWidth: 1,
+              },
+              propsForLabels: {
+                fontSize: 11,
+                fontFamily: 'System',
+                fontWeight: '400',
+              },
+              fillShadowGradient: '#007AFF',
+              fillShadowGradientOpacity: 0.2,
             }}
             bezier
+            withInnerLines={false}
+            withOuterLines={false}
+            withVerticalLines={false}
+            withHorizontalLines={true}
+            withDots={true}
+            withShadow={true}
             style={styles.chart}
           />
         </View>
@@ -409,11 +528,32 @@ const styles = StyleSheet.create({
     padding: 16,
     margin: 16,
   },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   chartTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 16,
+  },
+  cumulativeToggle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(240, 240, 240, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cumulativeToggleActive: {
+    backgroundColor: '#007AFF',
   },
   chart: {
     marginVertical: 8,

@@ -22,111 +22,6 @@ export default function TaskStatsScreen() {
     return null;
   }
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#f5f5f5',
-    },
-    content: {
-      flex: 1,
-      padding: 16,
-    },
-    statsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 12,
-      marginBottom: 24,
-    },
-    statCard: {
-      flex: 1,
-      minWidth: '45%',
-      backgroundColor: '#fff',
-      borderRadius: 16,
-      padding: 16,
-      alignItems: 'center',
-      elevation: 2,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-    },
-    statNumber: {
-      fontSize: 24,
-      fontWeight: '700',
-      marginVertical: 8,
-    },
-    statLabel: {
-      fontSize: 14,
-      color: '#666',
-      textAlign: 'center',
-    },
-    chartSection: {
-      marginBottom: 24,
-    },
-    chartHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 16,
-    },
-    sectionTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: '#333',
-      marginBottom: 16,
-    },
-    timeRangeContainer: {
-      flexDirection: 'row',
-      gap: 8,
-    },
-    timeRangeButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      backgroundColor: '#f0f0f0',
-    },
-    timeRangeButtonText: {
-      fontSize: 14,
-      color: '#666',
-    },
-    chartCard: {
-      backgroundColor: '#fff',
-      borderRadius: 16,
-      marginBottom: 16,
-      elevation: 2,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-    },
-    chart: {
-      marginVertical: 8,
-      borderRadius: 16,
-    },
-    chartContainer: {
-      position: 'relative',
-    },
-    cumulativeToggle: {
-      position: 'absolute',
-      top: 8,
-      right: 8,
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: 'rgba(240, 240, 240, 0.9)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2,
-    },
-    cumulativeToggleActive: {
-      backgroundColor: task.color,
-    },
-  });
-
   const getTimeRangeData = () => {
     const today = new Date();
     let startDate: Date;
@@ -513,3 +408,108 @@ export default function TaskStatsScreen() {
     </View>
   );
 } 
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginVertical: 8,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  chartSection: {
+    marginBottom: 24,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  timeRangeContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  timeRangeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+  },
+  timeRangeButtonText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  chartCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
+  },
+  chartContainer: {
+    position: 'relative',
+  },
+  cumulativeToggle: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(240, 240, 240, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cumulativeToggleActive: {
+    backgroundColor: task.color,
+  },
+});
