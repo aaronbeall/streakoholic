@@ -45,29 +45,42 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({ task }) => {
           </View>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>{task.name}</Text>
-            {task.stats?.streakStatus === 'up_to_date' && task.stats?.currentStreak > 0 ? (
-              <View style={[styles.streakBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                <MaterialCommunityIcons name="fire" size={16} color="#fff" />
-                <Text style={styles.streakText}>{task.stats.currentStreak}</Text>
-              </View>
-            ) : task.stats?.streakStatus === 'expiring' && task.stats?.currentStreak > 0 ? (
-              <View style={[styles.streakBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                <MaterialCommunityIcons name="clock-outline" size={16} color="#fff" />
-                <Text style={styles.streakText}>{task.stats.currentStreak}</Text>
-              </View>
-            ) : task.stats?.lastStreak && task.stats.lastStreak > 0 ? (
-              <View style={[styles.streakBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                <MaterialCommunityIcons name="sleep" size={16} color="#fff" />
-                <Text style={styles.streakText}>{task.stats.lastStreak}</Text>
-              </View>
-            ) : null}
+            <View style={styles.streakContainer}>
+              {task.stats?.streakStatus === 'up_to_date' && task.stats?.currentStreak > 0 ? (
+                <>
+                  <View style={[styles.streakBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                    <MaterialCommunityIcons name="fire" size={16} color="#fff" />
+                    <Text style={styles.streakText}>{task.stats.currentStreak}</Text>
+                  </View>
+                  {task.stats.currentStreak === task.stats.bestStreak && (
+                    <MaterialCommunityIcons name="trophy" size={20} color="#FFD700" style={styles.trophyIcon} />
+                  )}
+                </>
+              ) : task.stats?.streakStatus === 'expiring' && task.stats?.currentStreak > 0 ? (
+                <>
+                  <View style={[styles.streakBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                    <MaterialCommunityIcons name="fire" size={16} color="#fff" />
+                    <Text style={styles.streakText}>{task.stats.currentStreak}</Text>
+                  </View>
+                  <MaterialCommunityIcons name="clock-outline" size={20} color="rgba(255, 255, 255, 0.6)" style={styles.statusIcon} />
+                  {task.stats.currentStreak === task.stats.bestStreak && (
+                    <MaterialCommunityIcons name="trophy" size={20} color="#FFD700" style={styles.trophyIcon} />
+                  )}
+                </>
+              ) : task.stats?.lastStreak && task.stats.lastStreak > 0 ? (
+                <View style={[styles.streakBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                  <MaterialCommunityIcons name="sleep" size={16} color="#fff" />
+                  <Text style={styles.streakText}>{task.stats.lastStreak}</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
         </View>
 
         <TouchableOpacity 
           style={styles.headerButton}
           onPress={() => router.push({
-            pathname: '/add-task',
+            pathname: '/task-details',
             params: { taskId: task.id }
           })}
         >
@@ -147,6 +160,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
   },
+  streakContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   streakBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -159,6 +177,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  trophyIcon: {
+    marginTop: 2,
+  },
+  statusIcon: {
+    marginTop: 2,
   },
   tabContainer: {
     flexDirection: 'row',
