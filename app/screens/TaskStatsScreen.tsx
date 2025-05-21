@@ -317,7 +317,7 @@ export default function TaskStatsScreen() {
                 style={styles.chart}
               />
               <TouchableOpacity
-                style={[styles.cumulativeToggle, isCumulative && styles.cumulativeToggleActive]}
+                style={[styles.cumulativeToggle, isCumulative && { backgroundColor: task.color }]}
                 onPress={() => setIsCumulative(!isCumulative)}
               >
                 <MaterialCommunityIcons 
@@ -508,8 +508,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-  },
-  cumulativeToggleActive: {
-    backgroundColor: task.color,
   },
 });
