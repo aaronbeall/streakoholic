@@ -151,13 +151,37 @@ export default function TaskStatsScreen() {
   const getCompletionPatterns = () => {
     const dayOfWeekData = Array(7).fill(0);
     const hourOfDayData = Array(24).fill(0);
+    const today = new Date();
+    let startDate: Date;
+
+    // Set start date based on time range
+    switch (timeRange) {
+      case 'week':
+        startDate = subDays(today, 6);
+        break;
+      case 'month':
+        startDate = subDays(today, 29);
+        break;
+      case 'year':
+        startDate = subMonths(today, 11);
+        break;
+      case 'all':
+        // Find first completion date
+        const completionDates = task.completions?.map(c => new Date(c.date)) || [];
+        startDate = completionDates.length > 0 
+          ? new Date(Math.min(...completionDates.map(d => d.getTime())))
+          : new Date(task.createdAt);
+        break;
+    }
 
     task.completions?.forEach(completion => {
       const date = new Date(completion.date);
-      // Day of week (0 = Sunday, 6 = Saturday)
-      dayOfWeekData[date.getDay()] += completion.timesCompleted;
-      // Hour of day (0-23)
-      hourOfDayData[date.getHours()] += completion.timesCompleted;
+      if (date >= startDate && date <= today) {
+        // Day of week (0 = Sunday, 6 = Saturday)
+        dayOfWeekData[date.getDay()] += completion.timesCompleted;
+        // Hour of day (0-23)
+        hourOfDayData[date.getHours()] += completion.timesCompleted;
+      }
     });
 
     return { dayOfWeekData, hourOfDayData };
