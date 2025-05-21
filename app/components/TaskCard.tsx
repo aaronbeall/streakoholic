@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { addDays, format, getDay, getDaysInMonth, parseISO, startOfMonth, startOfWeek } from 'date-fns';
+import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
   Animated,
@@ -7,7 +8,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  View,
+  View
 } from 'react-native';
 import { Task } from '../types';
 
@@ -23,7 +24,7 @@ interface TaskCardProps {
 
 type CardSide = 'task' | 'calendar' | 'stats';
 
-const CardTask: React.FC<{ task: Task }> = ({ task }) => {
+const CardTask = React.memo(({ task }: { task: Task }) => {
   const getStreakBadgeStyle = () => {
     const currentStreak = task.stats?.currentStreak || 0;
     const lastStreak = task.stats?.lastStreak || 0;
@@ -89,9 +90,11 @@ const CardTask: React.FC<{ task: Task }> = ({ task }) => {
       )}
     </View>
   );
-};
+});
 
-const CardCalendar: React.FC<{ task: Task }> = ({ task }) => {
+CardTask.displayName = 'CardTask';
+
+const CardCalendar = React.memo(({ task }: { task: Task }) => {
   const today = format(new Date(), 'yyyy-MM-dd');
   const currentMonth = new Date();
   const daysInMonth = getDaysInMonth(currentMonth);
@@ -151,9 +154,11 @@ const CardCalendar: React.FC<{ task: Task }> = ({ task }) => {
       </View>
     </View>
   );
-};
+});
 
-const CardStats: React.FC<{ task: Task }> = ({ task }) => {
+CardCalendar.displayName = 'CardCalendar';
+
+const CardStats = React.memo(({ task }: { task: Task }) => {
   const getWeeklyStats = () => {
     const today = new Date();
     const weekStart = startOfWeek(today);
@@ -242,9 +247,11 @@ const CardStats: React.FC<{ task: Task }> = ({ task }) => {
       </View>
     </View>
   );
-};
+});
 
-export const TaskCard: React.FC<TaskCardProps> = ({ 
+CardStats.displayName = 'CardStats';
+
+export const TaskCard = React.memo(({ 
   task, 
   onPress, 
   onComplete, 
@@ -252,11 +259,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onLongPressCalendar,
   onLongPressStats,
   onLongPressTask,
-}) => {
+}: TaskCardProps) => {
   const flipAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [sides, setSides] = useState<[CardSide, CardSide]>(['task', 'calendar']);
   const [isFlipped, setIsFlipped] = useState(false);
+  const router = useRouter();
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -374,7 +382,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </Pressable>
     </View>
   );
-};
+});
+
+TaskCard.displayName = 'TaskCard';
 
 const styles = StyleSheet.create({
   container: {

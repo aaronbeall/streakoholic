@@ -18,6 +18,11 @@ export interface ChartData {
   data: number[];
 }
 
+export interface StreakStats {
+  upToDate: number;
+  expiring: number;
+}
+
 export const dayOfWeekLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export const hourOfDayLabels = Array.from({ length: 24 }, (_, i) => {
@@ -239,4 +244,15 @@ export const getDateRangeLabel = (range: DateRange): string => {
   
   // If different years, show full date
   return `${format(range.start, 'MMM d, yyyy')} - ${format(range.end, 'MMM d, yyyy')}`;
+};
+
+export const getStreakStats = (tasks: Task[]): StreakStats => {
+  return tasks.reduce((acc, task) => {
+    if (task.stats?.streakStatus === 'up_to_date' && task.stats.currentStreak > 0) {
+      acc.upToDate++;
+    } else if (task.stats?.streakStatus === 'expiring' && task.stats.currentStreak > 0) {
+      acc.expiring++;
+    }
+    return acc;
+  }, { upToDate: 0, expiring: 0 });
 }; 

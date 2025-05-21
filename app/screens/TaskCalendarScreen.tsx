@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { addMonths, format, getDay, getDaysInMonth, startOfMonth, subMonths } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { TaskHeader } from '../components/TaskHeader';
 import { useTaskContext } from '../context/TaskContext';
@@ -31,7 +31,7 @@ export default function TaskCalendarScreen() {
 
   const task = tasks.find(t => t.id === taskId);
   if (!task) {
-    return null;
+    throw new Error('Missing task');
   }
 
   const daysInMonth = getDaysInMonth(currentMonth);
@@ -39,7 +39,7 @@ export default function TaskCalendarScreen() {
   const startingDayOfWeek = getDay(firstDayOfMonth);
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  const days = Array.from({ length: daysInMonth }, (_, i) => {
+  const days = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i + 1);
     const dateString = format(date, 'yyyy-MM-dd');
     const isCompleted = task.completions?.some(completion => completion.date === dateString);
@@ -50,7 +50,8 @@ export default function TaskCalendarScreen() {
       isToday,
       dayNumber: i + 1
     };
-  });
+  }),
+  [currentMonth, daysInMonth, task.completions, today]);
 
   const handleDayPress = (date: Date) => {
     const dateString = format(date, 'yyyy-MM-dd');

@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BarChart, LineChart } from 'react-native-chart-kit';
 import tinycolor from 'tinycolor2';
@@ -36,16 +36,16 @@ export default function TaskStatsScreen() {
 
   const task = tasks.find(t => t.id === taskId);
   if (!task) {
-    return null;
+    throw new Error('Missing task');
   }
 
-  const { start, end } = getDateRange(timeRange, tasks);
+  const { start, end } = useMemo(() => getDateRange(timeRange, tasks), [timeRange, tasks]);
   const { dayOfWeekData, hourOfDayData } = getCompletionPatterns(
     { start, end },
     task.completions || []
   );
 
-  const { labels, data } = getChartData(timeRange, task.completions || [], isCumulative);
+  const { labels, data } = useMemo(() => getChartData(timeRange, task.completions || [], isCumulative), [timeRange, task.completions, isCumulative]);
   const chartData = {
     labels,
     datasets: [{

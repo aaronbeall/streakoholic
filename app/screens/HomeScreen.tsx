@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -11,25 +11,19 @@ import {
 } from 'react-native';
 import { TaskCard } from '../components/TaskCard';
 import { useTaskContext } from '../context/TaskContext';
+import { getStreakStats } from '../utils/data';
 
 const GRID_SPACING = 16;
 const SIDE_PADDING = 16;
 
 type FilterType = 'up_to_date' | 'expiring' | null;
 
-const HomeHeader: React.FC<{ onFilterChange: (filter: FilterType) => void }> = ({ onFilterChange }) => {
+const HomeHeader = React.memo(({ onFilterChange }: { onFilterChange: (filter: FilterType) => void }) => {
   const router = useRouter();
   const { tasks } = useTaskContext();
   const [activeFilter, setActiveFilter] = useState<FilterType>(null);
 
-  const streakStats = tasks.reduce((acc, task) => {
-    if (task.stats?.streakStatus === 'up_to_date' && task.stats.currentStreak > 0) {
-      acc.upToDate++;
-    } else if (task.stats?.streakStatus === 'expiring' && task.stats.currentStreak > 0) {
-      acc.expiring++;
-    }
-    return acc;
-  }, { upToDate: 0, expiring: 0 });
+  const streakStats = useMemo(() => getStreakStats(tasks), [tasks]);
 
   const handleFilterPress = (filter: FilterType) => {
     const newFilter = activeFilter === filter ? null : filter;
@@ -101,7 +95,9 @@ const HomeHeader: React.FC<{ onFilterChange: (filter: FilterType) => void }> = (
       </TouchableOpacity>
     </View>
   );
-};
+});
+
+HomeHeader.displayName = "HomeHeader";
 
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
@@ -109,7 +105,7 @@ export const HomeScreen: React.FC = () => {
   const { width } = useWindowDimensions();
   const [filter, setFilter] = useState<FilterType>(null);
 
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = useMemo(() => tasks.filter(task => {
     if (!filter) return true;
     if (filter === 'up_to_date') {
       return task.stats?.streakStatus === 'up_to_date' && task.stats.currentStreak > 0;
@@ -118,7 +114,7 @@ export const HomeScreen: React.FC = () => {
       return task.stats?.streakStatus === 'expiring' && task.stats.currentStreak > 0;
     }
     return true;
-  });
+  }), [tasks, filter]);
 
   const getColumnCount = () => {
     if (width >= 1200) return 4;
@@ -233,5 +229,40 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIcon: {
+    marginRight: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterButton: {
+    padding: 8,
+    borderRadius: 16,
+    backgroundColor: '#f5f5f5',
+  },
+  filterButtonActive: {
+    backgroundColor: '#007AFF',
+  },
+  filterButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  filterButtonTextActive: {
+    color: '#fff',
   },
 }); 

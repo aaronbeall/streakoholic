@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -94,10 +94,10 @@ export const DashboardScreen: React.FC = () => {
   const [selectedTasks, setSelectedTasks] = useState<string[]>(tasks.map(t => t.id));
   const [isCumulative, setIsCumulative] = useState(false);
 
-  const { start, end } = getDateRange(selectedTimeFrame, tasks);
-  const filteredTasks = tasks.filter(task => selectedTasks.includes(task.id));
+  const { start, end } = useMemo(() => getDateRange(selectedTimeFrame, tasks), [selectedTimeFrame, tasks]);
+  const filteredTasks = useMemo(() => tasks.filter(task => selectedTasks.includes(task.id)), [tasks, selectedTasks]);
 
-  const getFilteredCompletions = () => {
+  const filteredTaskData = useMemo(() => {
     return filteredTasks.map(task => ({
       ...task,
       completions: task.completions?.filter(completion => {
@@ -108,14 +108,13 @@ export const DashboardScreen: React.FC = () => {
         return completionDate >= start && completionDate <= end;
       }) || []
     }));
-  };
+  }, [start, end, filteredTasks, selectedTimeFrame]);
 
-  const filteredTaskData = getFilteredCompletions();
-  const allCompletions = filteredTaskData.flatMap(task => task.completions || []);
-  const { dayOfWeekData, hourOfDayData } = getCompletionPatterns({ start, end }, allCompletions);
+  const allCompletions = useMemo(() => filteredTaskData.flatMap(task => task.completions || []), [filteredTaskData]);
+  const { dayOfWeekData, hourOfDayData } = useMemo(() => getCompletionPatterns({ start, end }, allCompletions), [allCompletions, start, end]);
 
-  const stats = calculateAggregateStats(filteredTaskData);
-  const { labels, data } = getChartData(selectedTimeFrame, allCompletions, isCumulative);
+  const stats = useMemo(() => calculateAggregateStats(filteredTaskData), [filteredTaskData]);
+  const { labels, data } = useMemo(() => getChartData(selectedTimeFrame, allCompletions, isCumulative), [allCompletions, isCumulative, selectedTimeFrame]);
   const chartData = {
     labels,
     datasets: [{
