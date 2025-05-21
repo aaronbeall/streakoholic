@@ -195,13 +195,19 @@ export default function TaskStatsScreen() {
 
       <ScrollView style={styles.content}>
         <View style={styles.statsGrid}>
-          {task.stats?.currentStreak ? (
+          {task.stats?.streakStatus === 'up_to_date' && task.stats.currentStreak > 0 ? (
             <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
               <MaterialCommunityIcons name="fire" size={24} color="#FF6B6B" />
               <Text style={[styles.statNumber, { color: '#FF6B6B' }]}>{task.stats.currentStreak}</Text>
               <Text style={styles.statLabel}>Current Streak</Text>
             </View>
-          ) : task.stats?.lastStreak ? (
+          ) : task.stats?.streakStatus === 'expiring' && task.stats.currentStreak > 0 ? (
+            <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
+              <MaterialCommunityIcons name="clock-outline" size={24} color="#FFA726" />
+              <Text style={[styles.statNumber, { color: '#FFA726' }]}>{task.stats.currentStreak}</Text>
+              <Text style={styles.statLabel}>Current Streak</Text>
+            </View>
+          ) : task.stats?.lastStreak && task.stats.lastStreak > 0 ? (
             <View style={[styles.statCard, { backgroundColor: getBackgroundColor(task.color) }]}>
               <MaterialCommunityIcons name="sleep" size={24} color="#90A4AE" />
               <Text style={[styles.statNumber, { color: '#90A4AE' }]}>{task.stats.lastStreak}</Text>

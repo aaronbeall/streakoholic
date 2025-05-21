@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { addDays, format, getDay, getDaysInMonth, isToday, parseISO, startOfMonth, startOfWeek } from 'date-fns';
+import { addDays, format, getDay, getDaysInMonth, parseISO, startOfMonth, startOfWeek } from 'date-fns';
 import React, { useRef, useState } from 'react';
 import {
   Animated,
@@ -27,17 +27,15 @@ const CardTask: React.FC<{ task: Task }> = ({ task }) => {
   const getStreakBadgeStyle = () => {
     const currentStreak = task.stats?.currentStreak || 0;
     const lastStreak = task.stats?.lastStreak || 0;
-    const lastCompleted = task.stats?.lastCompleted;
     const bestStreak = task.stats?.bestStreak || 0;
+    const streakStatus = task.stats?.streakStatus;
     
-    if (!lastCompleted) {
+    if (!streakStatus || streakStatus === 'never_started') {
       return null;
     }
 
-    const lastCompletedDate = parseISO(lastCompleted);
-    
     if (currentStreak > 0) {
-      if (isToday(lastCompletedDate)) {
+      if (streakStatus === 'up_to_date') {
         return {
           backgroundColor: '#FF6B6B',
           icon: 'fire' as const,

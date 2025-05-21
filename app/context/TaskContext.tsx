@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { format } from 'date-fns';
+import { differenceInDays, format, subDays } from 'date-fns';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Task, TaskCompletion, TaskStats } from '../types';
+import { StreakStatus, Task, TaskCompletion, TaskStats } from '../types';
 
 interface TaskContextType {
   tasks: Task[];
@@ -23,80 +23,91 @@ export const useTaskContext = () => {
 };
 
 const calculateTaskStats = (completions: TaskCompletion[]): TaskStats => {
-  if (!completions || completions.length === 0) {
-    return {
-      currentStreak: 0,
-      bestStreak: 0,
-      totalCompletions: 0,
-      completionRate: 0,
-      lastCompleted: undefined,
-      lastStreak: 0,
-    };
-  }
-
-  // Sort completions by date in descending order
-  const sortedCompletions = [...completions].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-
-  // Calculate current streak
-  let currentStreak = 0;
   const today = format(new Date(), 'yyyy-MM-dd');
-  const yesterday = format(new Date(Date.now() - 86400000), 'yyyy-MM-dd');
+  const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
 
-  // Only count streak if most recent completion is today or yesterday
-  if (sortedCompletions[0].date === today || sortedCompletions[0].date === yesterday) {
-    currentStreak = 1;
-    for (let i = 1; i < sortedCompletions.length; i++) {
-      const currentDate = new Date(sortedCompletions[i - 1].date);
-      const prevDate = new Date(sortedCompletions[i].date);
-      const dayDiff = (currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+  // Sort completions by date in ascending order
+  const sortedCompletions = [...completions].sort((a, b) => a.date.localeCompare(b.date));
+  
+  // Find all streaks
+  const streaks: { start: string; end: string; length: number }[] = [];
+  let currentStreak: { start: string; end: string; length: number } | null = null;
+
+  for (let i = 0; i < sortedCompletions.length; i++) {
+    const current = sortedCompletions[i];
+    const next = sortedCompletions[i + 1];
+    
+    if (!currentStreak) {
+      currentStreak = {
+        start: current.date,
+        end: current.date,
+        length: 1
+      };
+    }
+
+    if (next) {
+      const currentDate = new Date(current.date);
+      const nextDate = new Date(next.date);
+      const dayDiff = differenceInDays(nextDate, currentDate);
       
       if (dayDiff === 1) {
-        currentStreak++;
+        // Continue streak
+        currentStreak.end = next.date;
+        currentStreak.length++;
       } else {
-        break;
+        // End streak
+        streaks.push(currentStreak);
+        currentStreak = {
+          start: next.date,
+          end: next.date,
+          length: 1
+        };
       }
-    }
-  }
-
-  // Calculate best streak and last streak
-  let bestStreak = 0;
-  let lastStreak = 0;
-  let tempStreak = 1;
-  let foundLastStreak = false;
-
-  for (let i = 1; i < sortedCompletions.length; i++) {
-    const currentDate = new Date(sortedCompletions[i - 1].date);
-    const prevDate = new Date(sortedCompletions[i].date);
-    const dayDiff = (currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
-    
-    if (dayDiff === 1) {
-      tempStreak++;
-      bestStreak = Math.max(bestStreak, tempStreak);
     } else {
-      if (!foundLastStreak) {
-        lastStreak = tempStreak;
-        foundLastStreak = true;
-      }
-      tempStreak = 1;
+      // Last completion
+      streaks.push(currentStreak);
     }
   }
-  bestStreak = Math.max(bestStreak, tempStreak);
-  if (!foundLastStreak) {
-    lastStreak = tempStreak;
+
+  // Sort streaks by end date (most recent first)
+  streaks.sort((a, b) => b.end.localeCompare(a.end));
+
+  // Find best streak
+  const bestStreak = streaks.length > 0 
+    ? Math.max(...streaks.map(s => s.length))
+    : 0;
+
+  // Determine current streak and streak status
+  let currentStreakLength = 0;
+  let lastStreakLength = 0;
+  let streakStatus: StreakStatus = 'never_started';
+
+  if (streaks.length > 0) {
+    const mostRecentStreak = streaks[0];
+    lastStreakLength = mostRecentStreak.length;
+
+    if (mostRecentStreak.end === today) {
+      currentStreakLength = mostRecentStreak.length;
+      streakStatus = 'up_to_date';
+    } else if (mostRecentStreak.end === yesterday) {
+      currentStreakLength = mostRecentStreak.length;
+      streakStatus = 'expiring';
+    } else {
+      streakStatus = 'expired';
+    }
   }
 
-  const totalCompletions = completions.reduce((sum, c) => sum + c.timesCompleted, 0);
-  const completionRate = totalCompletions / (completions.length * 7); // Assuming 7 days per week
+  // Calculate completion rate
+  const totalDays = differenceInDays(new Date(), new Date(sortedCompletions[0]?.date || today)) + 1;
+  const completionRate = totalDays > 0 ? completions.length / totalDays : 0;
 
   return {
-    currentStreak,
+    currentStreak: currentStreakLength,
+    lastStreak: lastStreakLength,
     bestStreak,
-    totalCompletions,
+    totalCompletions: completions.length,
     completionRate,
-    lastCompleted: sortedCompletions[0].date,
-    lastStreak,
+    streakStatus,
   };
 };
 

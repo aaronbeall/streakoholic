@@ -24,13 +24,15 @@ export interface TaskCompletion {
   timesCompleted: number;
 }
 
+export type StreakStatus = 'up_to_date' | 'expiring' | 'expired' | 'never_started';
+
 export interface TaskStats {
   currentStreak: number;
+  lastStreak: number;
   bestStreak: number;
   totalCompletions: number;
   completionRate: number;
-  lastCompleted?: string;
-  lastStreak: number;
+  streakStatus: StreakStatus;
 }
 
 export interface TaskWithStats extends Task {

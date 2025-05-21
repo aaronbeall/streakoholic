@@ -26,12 +26,17 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({ task }) => {
         </View>
         <View style={styles.titleContainer}>
           <Text style={styles.title}>{task.name}</Text>
-          {task.stats?.currentStreak ? (
+          {task.stats?.streakStatus === 'up_to_date' && task.stats?.currentStreak > 0 ? (
             <View style={[styles.streakBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
               <MaterialCommunityIcons name="fire" size={16} color="#fff" />
               <Text style={styles.streakText}>{task.stats.currentStreak}</Text>
             </View>
-          ) : task.stats?.lastStreak ? (
+          ) : task.stats?.streakStatus === 'expiring' && task.stats?.currentStreak > 0 ? (
+            <View style={[styles.streakBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+              <MaterialCommunityIcons name="clock-outline" size={16} color="#fff" />
+              <Text style={styles.streakText}>{task.stats.currentStreak}</Text>
+            </View>
+          ) : task.stats?.lastStreak && task.stats.lastStreak > 0 ? (
             <View style={[styles.streakBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
               <MaterialCommunityIcons name="sleep" size={16} color="#fff" />
               <Text style={styles.streakText}>{task.stats.lastStreak}</Text>
