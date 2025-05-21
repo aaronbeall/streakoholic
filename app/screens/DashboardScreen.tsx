@@ -349,7 +349,7 @@ export const DashboardScreen: React.FC = () => {
 
     filteredTaskData.forEach(task => {
       task.completions.forEach(completion => {
-        const date = parseISO(completion.date);
+        const date = new Date(completion.completedAt);
         if (date >= startDate && date <= today) {
           // Day of week (0 = Sunday, 6 = Saturday)
           dayOfWeekData[date.getDay()] += completion.timesCompleted;
