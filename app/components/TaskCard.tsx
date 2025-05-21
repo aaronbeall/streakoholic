@@ -28,6 +28,7 @@ const CardTask: React.FC<{ task: Task }> = ({ task }) => {
     const currentStreak = task.stats?.currentStreak || 0;
     const lastStreak = task.stats?.lastStreak || 0;
     const lastCompleted = task.stats?.lastCompleted;
+    const bestStreak = task.stats?.bestStreak || 0;
     
     if (!lastCompleted) {
       return null;
@@ -41,12 +42,14 @@ const CardTask: React.FC<{ task: Task }> = ({ task }) => {
           backgroundColor: '#FF6B6B',
           icon: 'fire' as const,
           value: currentStreak,
+          showTrophy: currentStreak === bestStreak
         };
       }
       return {
         backgroundColor: '#FFA726',
         icon: 'clock-outline' as const,
         value: currentStreak,
+        showTrophy: currentStreak === bestStreak
       };
     }
 
@@ -55,6 +58,7 @@ const CardTask: React.FC<{ task: Task }> = ({ task }) => {
         backgroundColor: '#90A4AE',
         icon: 'sleep' as const,
         value: lastStreak,
+        showTrophy: false
       };
     }
 
@@ -75,6 +79,14 @@ const CardTask: React.FC<{ task: Task }> = ({ task }) => {
             <MaterialCommunityIcons name={streakBadgeStyle.icon} size={14} color="#fff" />
             <Text style={styles.streakText}>{streakBadgeStyle.value}</Text>
           </View>
+          {streakBadgeStyle.showTrophy && (
+            <MaterialCommunityIcons 
+              name="trophy" 
+              size={20} 
+              color="#FFD700" 
+              style={styles.trophyIcon} 
+            />
+          )}
         </View>
       )}
     </View>
@@ -172,12 +184,20 @@ const CardStats: React.FC<{ task: Task }> = ({ task }) => {
 
   const weeklyStats = getWeeklyStats();
   const monthlyStats = getMonthlyStats();
+  const isBestStreak = task.stats?.currentStreak === task.stats?.bestStreak && (task.stats?.bestStreak || 0) > 0;
 
   return (
     <View style={styles.statsContainer}>
       <View style={styles.statRow}>
-        <Text style={styles.statLabel}>Streak: {task.stats?.currentStreak || 0}</Text>
-        <Text style={styles.statLabel}>Best: {task.stats?.bestStreak || 0}</Text>
+        <Text style={styles.statLabel}>Streak: <Text style={styles.statValue}>{task.stats?.currentStreak || 0}</Text></Text>
+        {isBestStreak ? (
+          <View style={styles.bestStreakContainer}>
+            <MaterialCommunityIcons name="trophy" size={16} color="#FFD700" />
+            <Text style={[styles.statLabel, styles.bestStreakText]}>Best!</Text>
+          </View>
+        ) : (
+          <Text style={styles.statLabel}>Best: <Text style={styles.statValue}>{task.stats?.bestStreak || 0}</Text></Text>
+        )}
       </View>
       <View style={[styles.progressBar, { backgroundColor: task.color + '33' }]}>
         <View 
@@ -408,6 +428,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   streakBubble: {
     backgroundColor: '#FF6B6B',
@@ -496,7 +519,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#333',
   },
   progressBar: {
@@ -507,5 +530,17 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 3,
+  },
+  trophyIcon: {
+    marginLeft: 2,
+  },
+  bestStreakContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  bestStreakText: {
+    color: '#FFD700',
+    fontWeight: '600',
   },
 }); 
