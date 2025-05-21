@@ -60,7 +60,7 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({ task }) => {
 
 const styles = StyleSheet.create({
   header: {
-    paddingTop: 24,
+    paddingTop: 48,
     paddingBottom: 24,
     paddingHorizontal: 16,
     flexDirection: 'row',
