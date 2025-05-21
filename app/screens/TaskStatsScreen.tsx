@@ -8,6 +8,24 @@ import { TaskHeader } from '../components/TaskHeader';
 import { useTaskContext } from '../context/TaskContext';
 import { TimeFrame, dayOfWeekLabels, getChartData, getCompletionPatterns, getDateRange, hourOfDayLabels } from '../utils/data';
 
+interface TimeRangeButtonProps {
+  range: TimeFrame;
+  label: string;
+  isSelected: boolean;
+  color: string;
+  onPress: (range: TimeFrame) => void;
+}
+
+const TimeRangeButton: React.FC<TimeRangeButtonProps> = ({ range, label, isSelected, color, onPress }) => (
+  <TouchableOpacity
+    style={[styles.timeRangeButton, isSelected && { backgroundColor: color }]}
+    onPress={() => onPress(range)}
+  >
+    <Text style={[styles.timeRangeButtonText, isSelected && { color: '#fff' }]}>
+      {label}
+    </Text>
+  </TouchableOpacity>
+);
 
 export default function TaskStatsScreen() {
   const router = useRouter();
@@ -45,17 +63,6 @@ export default function TaskStatsScreen() {
       l: 98
     }).toString();
   };
-
-  const TimeRangeButton = ({ range, label }: { range: TimeFrame; label: string }) => (
-    <TouchableOpacity
-      style={[styles.timeRangeButton, timeRange === range && { backgroundColor: task.color }]}
-      onPress={() => setTimeRange(range)}
-    >
-      <Text style={[styles.timeRangeButtonText, timeRange === range && { color: '#fff' }]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
 
   const dayOfWeekChartData = {
     labels: dayOfWeekLabels,
@@ -117,10 +124,34 @@ export default function TaskStatsScreen() {
           <View style={styles.chartHeader}>
             <Text style={styles.sectionTitle}>Activity</Text>
             <View style={styles.timeRangeContainer}>
-              <TimeRangeButton range="week" label="Week" />
-              <TimeRangeButton range="month" label="Month" />
-              <TimeRangeButton range="year" label="Year" />
-              <TimeRangeButton range="all" label="All Time" />
+              <TimeRangeButton 
+                range="week" 
+                label="Week" 
+                isSelected={timeRange === 'week'} 
+                color={task.color}
+                onPress={setTimeRange}
+              />
+              <TimeRangeButton 
+                range="month" 
+                label="Month" 
+                isSelected={timeRange === 'month'} 
+                color={task.color}
+                onPress={setTimeRange}
+              />
+              <TimeRangeButton 
+                range="year" 
+                label="Year" 
+                isSelected={timeRange === 'year'} 
+                color={task.color}
+                onPress={setTimeRange}
+              />
+              <TimeRangeButton 
+                range="all" 
+                label="All Time" 
+                isSelected={timeRange === 'all'} 
+                color={task.color}
+                onPress={setTimeRange}
+              />
             </View>
           </View>
           <View style={[styles.chartCard, { padding: 0, marginBottom: 16 }]}>

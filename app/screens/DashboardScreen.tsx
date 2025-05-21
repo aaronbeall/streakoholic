@@ -12,8 +12,7 @@ import {
 } from 'react-native';
 import { BarChart, LineChart } from 'react-native-chart-kit';
 import { useTaskContext } from '../context/TaskContext';
-import { TaskStats } from '../types';
-import { TimeFrame, dayOfWeekLabels, getChartData, getCompletionPatterns, getDateRange, hourOfDayLabels } from '../utils/data';
+import { TimeFrame, calculateAggregateStats, dayOfWeekLabels, getChartData, getCompletionPatterns, getDateRange, getDateRangeLabel, hourOfDayLabels } from '../utils/data';
 
 const DashboardHeader: React.FC<{
   selectedTimeFrame: TimeFrame;
@@ -115,29 +114,7 @@ export const DashboardScreen: React.FC = () => {
   const allCompletions = filteredTaskData.flatMap(task => task.completions || []);
   const { dayOfWeekData, hourOfDayData } = getCompletionPatterns({ start, end }, allCompletions);
 
-  const calculateAggregateStats = (): TaskStats => {
-    const stats: TaskStats = {
-      totalCompletions: 0,
-      completionRate: 0,
-      currentStreak: 0,
-      bestStreak: 0,
-      streakStatus: 'never_started',
-      lastStreak: 0,
-    };
-
-    filteredTaskData.forEach(task => {
-      if (task.stats) {
-        stats.totalCompletions += task.completions.length;
-        stats.completionRate = (stats.completionRate + task.stats.completionRate) / 2;
-        stats.currentStreak = Math.max(stats.currentStreak, task.stats.currentStreak);
-        stats.bestStreak = Math.max(stats.bestStreak, task.stats.bestStreak);
-      }
-    });
-
-    return stats;
-  };
-
-  const stats = calculateAggregateStats();
+  const stats = calculateAggregateStats(filteredTaskData);
   const { labels, data } = getChartData(selectedTimeFrame, allCompletions, isCumulative);
   const chartData = {
     labels,
@@ -146,28 +123,6 @@ export const DashboardScreen: React.FC = () => {
       color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
       strokeWidth: 2,
     }],
-  };
-
-  const getDateRangeLabel = () => {
-    const startYear = start.getFullYear();
-    const endYear = end.getFullYear();
-    const startMonth = start.getMonth();
-    const endMonth = end.getMonth();
-    const startDay = start.getDate();
-    const endDay = end.getDate();
-
-    // If same year and month, only show day range
-    if (startYear === endYear && startMonth === endMonth) {
-      return `${format(start, 'MMM d')} - ${endDay}`;
-    }
-    
-    // If same year but different months, show month and day
-    if (startYear === endYear) {
-      return `${format(start, 'MMM d')} - ${format(end, 'MMM d')}`;
-    }
-    
-    // If different years, show full date
-    return `${format(start, 'MMM d, yyyy')} - ${format(end, 'MMM d, yyyy')}`;
   };
 
   const dayOfWeekChartData = {
@@ -197,7 +152,7 @@ export const DashboardScreen: React.FC = () => {
               : [...prev, taskId]
           );
         }}
-        dateRangeLabel={getDateRangeLabel()}
+        dateRangeLabel={getDateRangeLabel({ start, end })}
       />
       <ScrollView style={styles.content}>
         <View style={styles.statsGrid}>

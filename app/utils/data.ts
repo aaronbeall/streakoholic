@@ -1,5 +1,5 @@
 import { addDays, format, parseISO, setHours, startOfDay, subDays, subMonths, subYears } from 'date-fns';
-import { Task, TaskCompletion } from '../types';
+import { Task, TaskCompletion, TaskStats } from '../types';
 
 export type TimeFrame = 'week' | 'month' | 'year' | 'all';
 
@@ -195,4 +195,48 @@ export const getChartData = (
   }
 
   return { labels, data };
+};
+
+export const calculateAggregateStats = (tasks: Task[]): TaskStats => {
+  const stats: TaskStats = {
+    totalCompletions: 0,
+    completionRate: 0,
+    currentStreak: 0,
+    bestStreak: 0,
+    streakStatus: 'never_started',
+    lastStreak: 0,
+  };
+
+  tasks.forEach(task => {
+    if (task.stats) {
+      stats.totalCompletions += task.completions?.length || 0;
+      stats.completionRate = (stats.completionRate + task.stats.completionRate) / 2;
+      stats.currentStreak = Math.max(stats.currentStreak, task.stats.currentStreak);
+      stats.bestStreak = Math.max(stats.bestStreak, task.stats.bestStreak);
+    }
+  });
+
+  return stats;
+};
+
+export const getDateRangeLabel = (range: DateRange): string => {
+  const startYear = range.start.getFullYear();
+  const endYear = range.end.getFullYear();
+  const startMonth = range.start.getMonth();
+  const endMonth = range.end.getMonth();
+  const startDay = range.start.getDate();
+  const endDay = range.end.getDate();
+
+  // If same year and month, only show day range
+  if (startYear === endYear && startMonth === endMonth) {
+    return `${format(range.start, 'MMM d')} - ${endDay}`;
+  }
+  
+  // If same year but different months, show month and day
+  if (startYear === endYear) {
+    return `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`;
+  }
+  
+  // If different years, show full date
+  return `${format(range.start, 'MMM d, yyyy')} - ${format(range.end, 'MMM d, yyyy')}`;
 }; 
