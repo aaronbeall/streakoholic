@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { startOfDay, subDays, subMonths, subYears } from 'date-fns';
+import { format, parseISO, startOfDay, subDays, subMonths, subYears } from 'date-fns';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -21,7 +21,8 @@ const DashboardHeader: React.FC<{
   onTimeFrameChange: (timeFrame: TimeFrame) => void;
   selectedTasks: string[];
   onTaskToggle: (taskId: string) => void;
-}> = ({ selectedTimeFrame, onTimeFrameChange, selectedTasks, onTaskToggle }) => {
+  dateRangeLabel: string;
+}> = ({ selectedTimeFrame, onTimeFrameChange, selectedTasks, onTaskToggle, dateRangeLabel }) => {
   const { tasks } = useTaskContext();
   const router = useRouter();
 
@@ -34,11 +35,34 @@ const DashboardHeader: React.FC<{
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Dashboard</Text>
+        <View style={styles.headerTitleContainer}>
+          <MaterialCommunityIcons name="calendar" size={16} color="#666" style={styles.headerIcon} />
+          <Text style={styles.headerTitle}>{dateRangeLabel}</Text>
+        </View>
         <View style={styles.headerButton} />
       </View>
 
       <View style={styles.headerContent}>
+        <View style={styles.taskFilterContainer}>
+          {tasks.map((task) => (
+            <TouchableOpacity
+              key={task.id}
+              style={[
+                styles.taskFilterButton,
+                { backgroundColor: 'rgba(0, 0, 0, 0.05)' },
+                selectedTasks.includes(task.id) && { backgroundColor: task.color },
+              ]}
+              onPress={() => onTaskToggle(task.id)}
+            >
+              <MaterialCommunityIcons
+                name={task.icon}
+                size={16}
+                color={selectedTasks.includes(task.id) ? '#fff' : task.color}
+              />
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <View style={styles.timeFrameContainer}>
           {(['week', 'month', 'year', 'all'] as TimeFrame[]).map((timeFrame) => (
             <TouchableOpacity
@@ -60,26 +84,6 @@ const DashboardHeader: React.FC<{
             </TouchableOpacity>
           ))}
         </View>
-
-        <View style={styles.taskFilterContainer}>
-          {tasks.map((task) => (
-            <TouchableOpacity
-              key={task.id}
-              style={[
-                styles.taskFilterButton,
-                { backgroundColor: 'rgba(0, 0, 0, 0.05)' },
-                selectedTasks.includes(task.id) && { backgroundColor: task.color },
-              ]}
-              onPress={() => onTaskToggle(task.id)}
-            >
-              <MaterialCommunityIcons
-                name={task.icon}
-                size={16}
-                color={selectedTasks.includes(task.id) ? '#fff' : task.color}
-              />
-            </TouchableOpacity>
-          ))}
-        </View>
       </View>
     </View>
   );
@@ -93,6 +97,31 @@ export const DashboardScreen: React.FC = () => {
 
   const getDateRange = () => {
     const end = startOfDay(new Date());
+    
+    if (selectedTimeFrame === 'all') {
+      // Find earliest completion date across all tasks
+      let minDate = new Date();
+      let hasCompletions = false;
+
+      tasks.forEach(task => {
+        task.completions?.forEach(completion => {
+          const completionDate = parseISO(completion.date);
+          if (completionDate < minDate) minDate = completionDate;
+          hasCompletions = true;
+        });
+      });
+
+      // If no completions, default to last 30 days
+      if (!hasCompletions) {
+        return { start: subDays(end, 30), end };
+      }
+
+      return { 
+        start: startOfDay(minDate),
+        end
+      };
+    }
+
     switch (selectedTimeFrame) {
       case 'week':
         return { start: subDays(end, 7), end };
@@ -106,8 +135,23 @@ export const DashboardScreen: React.FC = () => {
   };
 
   const { start, end } = getDateRange();
-
   const filteredTasks = tasks.filter(task => selectedTasks.includes(task.id));
+
+  const getFilteredCompletions = () => {
+    return filteredTasks.map(task => ({
+      ...task,
+      completions: task.completions?.filter(completion => {
+        // Skip date filtering for "all" time frame
+        if (selectedTimeFrame === 'all') return true;
+        
+        const completionDate = parseISO(completion.date);
+        console.log({completionDate, start, end})
+        return completionDate >= start && completionDate <= end;
+      }) || []
+    }));
+  };
+
+  const filteredTaskData = getFilteredCompletions();
 
   const calculateAggregateStats = (): TaskStats => {
     const stats: TaskStats = {
@@ -119,9 +163,9 @@ export const DashboardScreen: React.FC = () => {
       lastStreak: null,
     };
 
-    filteredTasks.forEach(task => {
+    filteredTaskData.forEach(task => {
       if (task.stats) {
-        stats.totalCompletions += task.stats.totalCompletions;
+        stats.totalCompletions += task.completions.length;
         stats.completionRate = (stats.completionRate + task.stats.completionRate) / 2;
         stats.currentStreak = Math.max(stats.currentStreak, task.stats.currentStreak);
         stats.bestStreak = Math.max(stats.bestStreak, task.stats.bestStreak);
@@ -133,11 +177,56 @@ export const DashboardScreen: React.FC = () => {
 
   const stats = calculateAggregateStats();
 
-  const chartData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    datasets: [{
-      data: [0, 0, 0, 0, 0, 0, 0], // TODO: Calculate actual completion data
-    }],
+  const getChartData = () => {
+    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const labels = Array.from({ length: days }, (_, i) => {
+      const date = new Date(start);
+      date.setDate(date.getDate() + i);
+      return format(date, 'MMM d');
+    });
+
+    // Calculate completion history
+    const completionData = Array(days).fill(0);
+    filteredTaskData.forEach(task => {
+      task.completions.forEach(completion => {
+        const completionDate = new Date(completion.completedAt);
+        const dayIndex = Math.floor((completionDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        if (dayIndex >= 0 && dayIndex < days) {
+          completionData[dayIndex]++;
+        }
+      });
+    });
+
+    return {
+      labels,
+      completionData,
+    };
+  };
+
+  const chartData = getChartData();
+
+  const getDateRangeLabel = () => {
+    const { start, end } = getDateRange();
+    
+    const startYear = start.getFullYear();
+    const endYear = end.getFullYear();
+    const startMonth = start.getMonth();
+    const endMonth = end.getMonth();
+    const startDay = start.getDate();
+    const endDay = end.getDate();
+
+    // If same year and month, only show day range
+    if (startYear === endYear && startMonth === endMonth) {
+      return `${format(start, 'MMM d')} - ${endDay}`;
+    }
+    
+    // If same year but different months, show month and day
+    if (startYear === endYear) {
+      return `${format(start, 'MMM d')} - ${format(end, 'MMM d')}`;
+    }
+    
+    // If different years, show full date
+    return `${format(start, 'MMM d, yyyy')} - ${format(end, 'MMM d, yyyy')}`;
   };
 
   return (
@@ -153,6 +242,7 @@ export const DashboardScreen: React.FC = () => {
               : [...prev, taskId]
           );
         }}
+        dateRangeLabel={getDateRangeLabel()}
       />
       <ScrollView style={styles.content}>
         <View style={styles.statsGrid}>
@@ -181,7 +271,12 @@ export const DashboardScreen: React.FC = () => {
         <View style={styles.chartContainer}>
           <Text style={styles.chartTitle}>Completion History</Text>
           <LineChart
-            data={chartData}
+            data={{
+              labels: chartData.labels,
+              datasets: [{
+                data: chartData.completionData,
+              }],
+            }}
             width={width - 32}
             height={220}
             chartConfig={{
@@ -222,10 +317,18 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     paddingHorizontal: 16,
   },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666',
+  },
+  headerIcon: {
+    marginTop: 1,
   },
   headerContent: {
     alignItems: 'center',
