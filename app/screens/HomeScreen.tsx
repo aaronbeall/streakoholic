@@ -37,7 +37,7 @@ const HomeHeader = React.memo(({ onFilterChange }: { onFilterChange: (filter: Fi
         style={styles.headerButton}
         onPress={() => router.push({ pathname: '/dashboard' })}
       >
-        <MaterialCommunityIcons name="view-dashboard" size={24} color="#333" />
+        <MaterialCommunityIcons name="chart-bar" size={24} color="#333" />
       </TouchableOpacity>
 
       <View style={styles.streakBubbles}>
