@@ -19,8 +19,8 @@ export interface Task {
 export interface TaskCompletion {
   id: string;
   taskId: string;
-  date: string;
-  completedAt: string;
+  date: string; // Ex. "2025-06-01"
+  completedAt: string; // ISO string based on when the task was marked completed (which may not be on the specified date!)
   timesCompleted: number;
 }
 

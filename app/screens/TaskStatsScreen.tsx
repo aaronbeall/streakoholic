@@ -1,5 +1,4 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { addDays, format, subDays, subMonths } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -7,14 +6,14 @@ import { BarChart, LineChart } from 'react-native-chart-kit';
 import tinycolor from 'tinycolor2';
 import { TaskHeader } from '../components/TaskHeader';
 import { useTaskContext } from '../context/TaskContext';
+import { TimeFrame, dayOfWeekLabels, getChartData, getCompletionPatterns, getDateRange, hourOfDayLabels } from '../utils/data';
 
-type TimeRange = 'week' | 'month' | 'year' | 'all';
 
 export default function TaskStatsScreen() {
   const router = useRouter();
   const { taskId } = useLocalSearchParams<{ taskId: string }>();
   const { tasks } = useTaskContext();
-  const [timeRange, setTimeRange] = useState<TimeRange>('month');
+  const [timeRange, setTimeRange] = useState<TimeFrame>('month');
   const [isCumulative, setIsCumulative] = useState(false);
 
   const task = tasks.find(t => t.id === taskId);
@@ -22,113 +21,13 @@ export default function TaskStatsScreen() {
     return null;
   }
 
-  const getTimeRangeData = () => {
-    const today = new Date();
-    let startDate: Date;
-    let labels: string[] = [];
-    let data: number[] = [];
-    let groupSize = 1; // Default group size
+  const { start, end } = getDateRange(timeRange, tasks);
+  const { dayOfWeekData, hourOfDayData } = getCompletionPatterns(
+    { start, end },
+    task.completions || []
+  );
 
-    switch (timeRange) {
-      case 'week':
-        startDate = subDays(today, 6); // 7 days including today
-        labels = Array.from({ length: 7 }, (_, i) => {
-          const date = subDays(today, i); // Start from today and go backwards
-          return format(date, 'EEE');
-        }).reverse(); // Reverse to maintain left-to-right order
-        data = Array(7).fill(0);
-        break;
-      case 'month':
-        startDate = subDays(today, 29); // 30 days including today
-        labels = Array.from({ length: 30 }, (_, i) => {
-          const date = subDays(today, i); // Start from today and go backwards
-          return i % 5 === 0 ? format(date, 'MMM d') : '';
-        }).reverse(); // Reverse to maintain left-to-right order
-        data = Array(30).fill(0);
-        break;
-      case 'year':
-        startDate = subMonths(today, 11); // 12 months including current month
-        labels = Array.from({ length: 12 }, (_, i) => {
-          const date = subMonths(today, i); // Start from today and go backwards
-          return format(date, 'MMM');
-        }).reverse(); // Reverse to maintain left-to-right order
-        data = Array(12).fill(0);
-        break;
-      case 'all':
-        // Find first and last completion dates
-        const completionDates = task.completions?.map(c => new Date(c.date)) || [];
-        if (completionDates.length === 0) {
-          startDate = new Date(task.createdAt);
-        } else {
-          startDate = new Date(Math.min(...completionDates.map(d => d.getTime())));
-          const lastCompletion = new Date(Math.max(...completionDates.map(d => d.getTime())));
-          today.setTime(lastCompletion.getTime()); // Use last completion as the end date
-        }
-        
-        const totalDays = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        let dateFormat: string;
-
-        if (totalDays <= 30) {
-          // If less than a month, show daily
-          groupSize = 1;
-          dateFormat = 'MMM d';
-        } else if (totalDays <= 90) {
-          // If less than 3 months, show weekly
-          groupSize = 7;
-          dateFormat = 'MMM d';
-        } else if (totalDays <= 365) {
-          // If less than a year, show monthly
-          groupSize = 30;
-          dateFormat = 'MMM';
-        } else {
-          // If more than a year, show quarterly
-          groupSize = 90;
-          dateFormat = 'MMM yyyy';
-        }
-
-        const numGroups = Math.ceil(totalDays / groupSize);
-        const midPoint = Math.floor(numGroups / 2);
-        
-        labels = Array.from({ length: numGroups }, (_, i) => {
-          if (i === 0 || i === midPoint || i === numGroups - 1) {
-            const date = addDays(startDate, i * groupSize);
-            return format(date, dateFormat);
-          }
-          return '';
-        });
-        data = Array(numGroups).fill(0);
-        break;
-    }
-
-    task.completions?.forEach(completion => {
-      const date = new Date(completion.date);
-      if (date >= startDate && date <= today) {
-        const index = timeRange === 'week' 
-          ? 6 - Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-          : timeRange === 'month'
-          ? 29 - Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-          : timeRange === 'year'
-          ? 11 - Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24 * 30))
-          : Math.floor((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * groupSize));
-        if (index >= 0 && index < data.length) {
-          data[index] += completion.timesCompleted;
-        }
-      }
-    });
-
-    // Convert to cumulative if needed
-    if (isCumulative) {
-      let runningTotal = 0;
-      data = data.map(value => {
-        runningTotal += value;
-        return runningTotal;
-      });
-    }
-
-    return { labels, data };
-  };
-
-  const { labels, data } = getTimeRangeData();
+  const { labels, data } = getChartData(timeRange, task.completions || [], isCumulative);
   const chartData = {
     labels,
     datasets: [{
@@ -147,7 +46,7 @@ export default function TaskStatsScreen() {
     }).toString();
   };
 
-  const TimeRangeButton = ({ range, label }: { range: TimeRange; label: string }) => (
+  const TimeRangeButton = ({ range, label }: { range: TimeFrame; label: string }) => (
     <TouchableOpacity
       style={[styles.timeRangeButton, timeRange === range && { backgroundColor: task.color }]}
       onPress={() => setTimeRange(range)}
@@ -157,57 +56,6 @@ export default function TaskStatsScreen() {
       </Text>
     </TouchableOpacity>
   );
-
-  const getCompletionPatterns = () => {
-    const dayOfWeekData = Array(7).fill(0);
-    const hourOfDayData = Array(24).fill(0);
-    const today = new Date();
-    let startDate: Date;
-
-    // Set start date based on time range
-    switch (timeRange) {
-      case 'week':
-        startDate = subDays(today, 6);
-        break;
-      case 'month':
-        startDate = subDays(today, 29);
-        break;
-      case 'year':
-        startDate = subMonths(today, 11);
-        break;
-      case 'all':
-        // Find first completion date
-        const completionDates = task.completions?.map(c => new Date(c.date)) || [];
-        startDate = completionDates.length > 0 
-          ? new Date(Math.min(...completionDates.map(d => d.getTime())))
-          : new Date(task.createdAt);
-        break;
-    }
-
-    task.completions?.forEach(completion => {
-      const date = new Date(completion.completedAt);
-      if (date >= startDate && date <= today) {
-        // Day of week (0 = Sunday, 6 = Saturday)
-        dayOfWeekData[date.getDay()] += completion.timesCompleted;
-        // Hour of day (0-23)
-        hourOfDayData[date.getHours()] += completion.timesCompleted;
-      }
-    });
-
-    return { dayOfWeekData, hourOfDayData };
-  };
-
-  const { dayOfWeekData, hourOfDayData } = getCompletionPatterns();
-
-  const dayOfWeekLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const hourOfDayLabels = Array.from({ length: 24 }, (_, i) => {
-    if (i % 6 === 0) { // Show every 6 hours
-      const hour = i === 0 || i === 12 ? 12 : i % 12;
-      const ampm = i < 12 ? 'am' : 'pm';
-      return `${hour}${ampm}`;
-    }
-    return '';
-  });
 
   const dayOfWeekChartData = {
     labels: dayOfWeekLabels,
