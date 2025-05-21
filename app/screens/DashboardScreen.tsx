@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { BarChart, LineChart } from 'react-native-chart-kit';
 import { useTaskContext } from '../context/TaskContext';
-import { TaskStats } from '../types/Task';
+import { TaskStats } from '../types';
 
 type TimeFrame = 'week' | 'month' | 'year' | 'all';
 
@@ -160,7 +160,7 @@ export const DashboardScreen: React.FC = () => {
       currentStreak: 0,
       bestStreak: 0,
       streakStatus: 'never_started',
-      lastStreak: null,
+      lastStreak: 0,
     };
 
     filteredTaskData.forEach(task => {
