@@ -154,8 +154,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const saveTasks = async (updatedTasks: Task[]) => {
     try {
-      await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
       setTasks(updatedTasks);
+      await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
     } catch (error) {
       console.error('Error saving tasks:', error);
     }
