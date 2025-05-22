@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { TaskCard } from '../components/TaskCard';
 import { useTaskContext } from '../context/TaskContext';
+import { Task } from '../types';
 import { getStreakStats } from '../utils/data';
 
 const GRID_SPACING = 16;
@@ -101,7 +102,7 @@ HomeHeader.displayName = "HomeHeader";
 
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
-  const { tasks, completeTask } = useTaskContext();
+  const { tasks, completeTask, isTaskCompleted } = useTaskContext();
   const { width } = useWindowDimensions();
   const [filter, setFilter] = useState<FilterType>(null);
 
@@ -125,6 +126,14 @@ export const HomeScreen: React.FC = () => {
   const columnCount = getColumnCount();
   const availableWidth = width - (SIDE_PADDING * 2) - (GRID_SPACING * (columnCount - 1));
   const cardSize = Math.floor(availableWidth / columnCount);
+
+  const handleTaskLongPress = (task: Task) => {
+    if (isTaskCompleted(task)) {
+      router.push({ pathname: '/task-details', params: { taskId: task.id } });
+    } else {
+      completeTask(task.id);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -154,7 +163,7 @@ export const HomeScreen: React.FC = () => {
               pathname: '/task-stats', 
               params: { taskId: item.id } 
             })}
-            onLongPressTask={() => completeTask(item.id)}
+            onLongPressTask={() => handleTaskLongPress(item)}
           />
         )}
         contentContainerStyle={styles.listContent}
