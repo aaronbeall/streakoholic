@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useDebounce } from 'use-debounce';
 import { MaterialCommunityIconName } from '../types';
 
@@ -61,6 +61,23 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   const [visibleCount, setVisibleCount] = useState(12);
   const scrollViewRef = useRef<ScrollView>(null);
   const searchInputRef = useRef<TextInput>(null);
+  const searchHeight = useRef(new Animated.Value(0)).current;
+
+  // Animate search container height
+  useEffect(() => {
+    Animated.timing(searchHeight, {
+      toValue: showAll ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start(() => {
+      // Focus input after animation completes
+      if (showAll) {
+        setTimeout(() => {
+          searchInputRef.current?.focus();
+        }, 200);
+      }
+    });
+  }, [showAll]);
 
   // Reset visible count when search changes
   useEffect(() => {
@@ -110,25 +127,36 @@ export const IconPicker: React.FC<IconPickerProps> = ({
 
   return (
     <View>
-      {showAll && (
-        <View style={styles.searchContainer}>
-          <TextInput
-            ref={searchInputRef}
-            style={styles.searchInput}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search all icons..."
-            placeholderTextColor="#999"
-            autoFocus
-          />
-          <MaterialCommunityIcons 
-            name="magnify" 
-            size={20} 
-            color="#999" 
-            style={styles.searchIcon}
-          />
-        </View>
-      )}
+      <Animated.View style={[
+        styles.searchContainer,
+        {
+          height: searchHeight.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 45], // 56 = height of search input + margin
+          }),
+          opacity: searchHeight,
+          marginBottom: searchHeight.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 16],
+          }),
+        },
+      ]}>
+        <TextInput
+          ref={searchInputRef}
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search all icons..."
+          placeholderTextColor="#999"
+          autoFocus
+        />
+        <MaterialCommunityIcons 
+          name="magnify" 
+          size={20} 
+          color="#999" 
+          style={styles.searchIcon}
+        />
+      </Animated.View>
       <ScrollView 
         ref={scrollViewRef}
         style={styles.scrollView}
@@ -183,7 +211,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
 const styles = StyleSheet.create({
   searchContainer: {
     position: 'relative',
-    marginBottom: 16,
+    overflow: 'hidden',
   },
   searchInput: {
     borderWidth: 1,

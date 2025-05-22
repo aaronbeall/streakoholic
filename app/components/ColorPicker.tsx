@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import tinycolor from 'tinycolor2';
 
 // Modern, pleasing colors suitable for icons
-const COLOR_OPTIONS = [
+const DEFAULT_COLORS = [
   '#FF6B6B', // Coral Red
   '#4ECDC4', // Turquoise
   '#45B7D1', // Sky Blue
@@ -29,37 +29,42 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   selectedColor,
   onColorSelect,
 }) => {
-  const [additionalColors, setAdditionalColors] = useState<string[]>([]);
+  const [colors, setColors] = useState(() => {
+    // Initialize with default colors, ensuring selected color is included
+    return DEFAULT_COLORS.includes(selectedColor) 
+      ? DEFAULT_COLORS 
+      : [selectedColor, ...DEFAULT_COLORS];
+  });
   const scrollViewRef = useRef<ScrollView>(null);
   
   // Generate 10 random colors using tinycolor
   const generateRandomColors = () => {
     return Array.from({ length: 10 }, () => {
-      // Generate a random hue (0-360)
       const hue = Math.floor(Math.random() * 360);
-      // Use high saturation and medium lightness for vibrant colors
       return tinycolor({ h: hue, s: 85, l: 65 }).toHexString();
     });
   };
 
   const handleShowMore = () => {
-    setAdditionalColors(prev => [... new Set([...prev, ...generateRandomColors()])]);
+    setColors(prev => [...new Set([...prev, ...generateRandomColors()])]);
   };
 
   const handleShowLess = () => {
-    setAdditionalColors([]);
+    // Reset to default colors, ensuring selected color is included
+    setColors(DEFAULT_COLORS.includes(selectedColor) 
+      ? DEFAULT_COLORS 
+      : [selectedColor, ...DEFAULT_COLORS]
+    );
   };
 
   // Scroll to bottom when additional colors are added
   useEffect(() => {
-    if (additionalColors.length > 0) {
+    if (colors.length > DEFAULT_COLORS.length) {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100); // Small delay to ensure content is rendered
+      }, 100);
     }
-  }, [additionalColors]);
-
-  const allColors = [...COLOR_OPTIONS, ...additionalColors];
+  }, [colors]);
 
   return (
     <View>
@@ -69,7 +74,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.colorGrid}>
-          {allColors.map((color) => (
+          {colors.map((color) => (
             <TouchableOpacity
               key={color}
               style={[
@@ -105,7 +110,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         </View>
       </ScrollView>
       
-      {additionalColors.length > 0 && (
+      {colors.length > DEFAULT_COLORS.length && (
         <TouchableOpacity
           style={styles.showLessButton}
           onPress={handleShowLess}
