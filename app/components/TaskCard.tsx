@@ -349,7 +349,7 @@ export const TaskCard = React.memo(({
       bounciness: 4
     }).start();
 
-    progressAnim.value = withTiming(1, { duration: 500 });
+    progressAnim.value = withTiming(.99999, { duration: 500 });
   };
 
   const handlePressOut = () => {
