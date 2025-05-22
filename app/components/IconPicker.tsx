@@ -2,8 +2,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useDebounce } from 'use-debounce';
-import { MaterialCommunityIconName } from '../types';
 import { ALL_ICONS, DEFAULT_ICONS } from '../constants/task';
+import { MaterialCommunityIconName } from '../types';
 
 const PAGE_SIZE = 12;
 
@@ -172,6 +172,11 @@ export const IconPicker: React.FC<IconPickerProps> = ({
             </TouchableOpacity>
           )}
         </View>
+        {!debouncedQuery && showingCount >= DEFAULT_ICONS.length && (
+          <Text style={styles.searchHint}>
+            Search for {ALL_ICONS.length - DEFAULT_ICONS.length} more icons...
+          </Text>
+        )}
       </ScrollView>
       {showSearch && (
         <TouchableOpacity
@@ -239,5 +244,12 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontSize: 14,
     fontWeight: '500',
+  },
+  searchHint: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 14,
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 }); 
