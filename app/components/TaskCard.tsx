@@ -10,7 +10,16 @@ import {
   Text,
   View
 } from 'react-native';
+import AnimatedSvg, {
+  SharedValue,
+  useAnimatedProps,
+  useSharedValue,
+  withTiming
+} from 'react-native-reanimated';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { Task } from '../types';
+
+const AnimatedPath = AnimatedSvg.createAnimatedComponent(Path);
 
 interface TaskCardProps {
   task: Task;
@@ -24,7 +33,13 @@ interface TaskCardProps {
 
 type CardSide = 'task' | 'calendar' | 'stats';
 
-const CardTask = React.memo(({ task }: { task: Task }) => {
+interface CardTaskProps {
+  task: Task;
+  progress: SharedValue<number>;
+}
+
+const CardTask = React.memo(({ task, progress }: CardTaskProps) => {
+
   const getStreakBadgeStyle = () => {
     const currentStreak = task.stats?.currentStreak || 0;
     const lastStreak = task.stats?.lastStreak || 0;
@@ -66,10 +81,69 @@ const CardTask = React.memo(({ task }: { task: Task }) => {
 
   const streakBadgeStyle = getStreakBadgeStyle();
 
+  const CIRCLE_STROKE_WIDTH = 8;
+  const CIRCLE_RADIUS = 60;
+  const CIRCLE_CENTER = 64;
+  const INNER_CIRCLE_RADIUS = CIRCLE_RADIUS - CIRCLE_STROKE_WIDTH;
+
+  const animatedProps = useAnimatedProps(() => {
+    const angle = progress.value * 360;
+    const radians = (angle - 90) * (Math.PI / 180);
+    const x = CIRCLE_CENTER + INNER_CIRCLE_RADIUS * Math.cos(radians);
+    const y = CIRCLE_CENTER + INNER_CIRCLE_RADIUS * Math.sin(radians);
+    
+    // Create the path for the pie slice
+    const largeArcFlag = angle > 180 ? 1 : 0;
+    const path = [
+      `M ${CIRCLE_CENTER} ${CIRCLE_CENTER}`,
+      `L ${CIRCLE_CENTER} ${CIRCLE_CENTER - INNER_CIRCLE_RADIUS}`,
+      `A ${INNER_CIRCLE_RADIUS} ${INNER_CIRCLE_RADIUS} 0 ${largeArcFlag} 1 ${x} ${y}`,
+      'Z'
+    ].join(' ');
+
+    return {
+      d: path
+    };
+  });
+
+  const isCompleted = task.completions?.some(completion => 
+    completion.date === format(new Date(), 'yyyy-MM-dd')
+  );
+
   return (
     <View style={styles.contentContainer}>
-      <View style={[styles.iconContainer, { backgroundColor: task.color }]}>
-        <MaterialCommunityIcons name={task.icon} size={64} color="#fff" />
+      <View style={[styles.iconContainer, { backgroundColor: 'transparent' }]}>
+        <Svg width={128} height={128} viewBox="0 0 128 128">
+          {/* Outer circle (border) */}
+          <Circle
+            cx={CIRCLE_CENTER}
+            cy={CIRCLE_CENTER}
+            r={CIRCLE_RADIUS}
+            stroke={task.color}
+            strokeWidth={CIRCLE_STROKE_WIDTH}
+            fill={isCompleted ? task.color : 'none'}
+          />
+          {/* Inner circle (progress) */}
+          {!isCompleted && (
+            <AnimatedPath
+              fill={task.color}
+              animatedProps={animatedProps}
+            />
+          )}
+        </Svg>
+        <MaterialCommunityIcons 
+          name={task.icon} 
+          size={64} 
+          color={isCompleted ? '#fff' : task.color} 
+          style={[
+            StyleSheet.absoluteFill, 
+            { 
+              textAlign: 'center',
+              textAlignVertical: 'center',
+              lineHeight: 128
+            }
+          ]} 
+        />
       </View>
       <Text style={styles.taskName} numberOfLines={1}>{task.name}</Text>
       {streakBadgeStyle && (
@@ -262,6 +336,7 @@ export const TaskCard = React.memo(({
 }: TaskCardProps) => {
   const flipAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const progressAnim = useSharedValue(0);
   const [sides, setSides] = useState<[CardSide, CardSide]>(['task', 'calendar']);
   const [isFlipped, setIsFlipped] = useState(false);
   const router = useRouter();
@@ -273,6 +348,8 @@ export const TaskCard = React.memo(({
       speed: 50,
       bounciness: 4
     }).start();
+
+    progressAnim.value = withTiming(1, { duration: 500 });
   };
 
   const handlePressOut = () => {
@@ -282,6 +359,19 @@ export const TaskCard = React.memo(({
       speed: 50,
       bounciness: 4
     }).start();
+
+    progressAnim.value = withTiming(0, { duration: 200 });
+  };
+
+  const handleLongPress = () => {
+    const visibleSide = isFlipped ? sides[1] : sides[0];
+    if (visibleSide === 'calendar' && onLongPressCalendar) {
+      onLongPressCalendar();
+    } else if (visibleSide === 'stats' && onLongPressStats) {
+      onLongPressStats();
+    } else if (visibleSide === 'task' && onLongPressTask) {
+      onLongPressTask();
+    }
   };
 
   const flipCard = () => {
@@ -343,22 +433,11 @@ export const TaskCard = React.memo(({
   const renderContent = (side: CardSide) => {
     switch (side) {
       case 'task':
-        return <CardTask task={task} />;
+        return <CardTask task={task} progress={progressAnim} />;
       case 'calendar':
         return <CardCalendar task={task} />;
       case 'stats':
         return <CardStats task={task} />;
-    }
-  };
-
-  const handleLongPress = () => {
-    const visibleSide = isFlipped ? sides[1] : sides[0];
-    if (visibleSide === 'calendar' && onLongPressCalendar) {
-      onLongPressCalendar();
-    } else if (visibleSide === 'stats' && onLongPressStats) {
-      onLongPressStats();
-    } else if (visibleSide === 'task' && onLongPressTask) {
-      onLongPressTask();
     }
   };
 
@@ -425,6 +504,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    position: 'relative',
   },
   taskName: {
     fontSize: 14,

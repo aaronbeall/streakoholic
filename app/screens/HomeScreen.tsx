@@ -154,7 +154,7 @@ export const HomeScreen: React.FC = () => {
               pathname: '/task-stats', 
               params: { taskId: item.id } 
             })}
-            onLongPressTask={() => router.push({ pathname: '/task-details', params: { taskId: item.id } })}
+            onLongPressTask={() => completeTask(item.id)}
           />
         )}
         contentContainerStyle={styles.listContent}
