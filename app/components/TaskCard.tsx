@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { addDays, format, getDay, getDaysInMonth, parseISO, startOfMonth, startOfWeek } from 'date-fns';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   FlatList,
@@ -10,17 +10,20 @@ import {
   Text,
   View
 } from 'react-native';
-import AnimatedSvg, {
+import Reanimated, {
   SharedValue,
   useAnimatedProps,
+  useAnimatedStyle,
   useSharedValue,
+  withSequence,
+  withSpring,
   withTiming
 } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useTaskContext } from '../context/TaskContext';
 import { Task } from '../types';
 
-const AnimatedPath = AnimatedSvg.createAnimatedComponent(Path);
+const AnimatedPath = Reanimated.createAnimatedComponent(Path);
 
 interface TaskCardProps {
   task: Task;
@@ -37,10 +40,16 @@ type CardSide = 'task' | 'calendar' | 'stats';
 interface CardTaskProps {
   task: Task;
   progress: SharedValue<number>;
+  isCompleting: boolean;
+  onCompleted: () => void;
 }
 
-const CardTask = React.memo(({ task, progress }: CardTaskProps) => {
+const CardTask = React.memo(({ task, progress, isCompleting, onCompleted }: CardTaskProps) => {
   const { isTaskCompleted } = useTaskContext();
+  const checkmarkOpacity = useSharedValue(0);
+  const iconOpacity = useSharedValue(1);
+  const scale = useSharedValue(1);
+
   const getStreakBadgeStyle = () => {
     const currentStreak = task.stats?.currentStreak || 0;
     const lastStreak = task.stats?.lastStreak || 0;
@@ -107,11 +116,45 @@ const CardTask = React.memo(({ task, progress }: CardTaskProps) => {
     };
   });
 
-  const isCompleted = isTaskCompleted(task);
+  const checkmarkStyle = useAnimatedStyle(() => ({
+    opacity: checkmarkOpacity.value,
+    transform: [{ scale: checkmarkOpacity.value }]
+  }));
+
+  const iconStyle = useAnimatedStyle(() => ({
+    opacity: iconOpacity.value * (1 - progress.value)
+  }));
+
+  const containerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }));
+
+  const completed = isTaskCompleted(task) || isCompleting;
+
+  useEffect(() => {
+    if (isCompleting) {
+      // Pop animation
+      scale.value = withSequence(
+        withSpring(1.1, { damping: 8, stiffness: 100 }),
+        withSpring(1, { damping: 8, stiffness: 100 })
+      );
+      
+      // Fade out icon and show checkmark
+      iconOpacity.value = 0;
+      checkmarkOpacity.value = withTiming(1, { duration: 200 });
+
+      // After delay, fade out checkmark and show icon
+      setTimeout(() => {
+        checkmarkOpacity.value = withTiming(0, { duration: 200 });
+        iconOpacity.value = withTiming(1, { duration: 200 });
+      }, 500);
+      setTimeout(() => onCompleted(), 800);
+    }
+  }, [isCompleting]);
 
   return (
     <View style={styles.contentContainer}>
-      <View style={[styles.iconContainer, { backgroundColor: 'transparent' }]}>
+      <Reanimated.View style={[styles.iconContainer, { backgroundColor: 'transparent' }, containerStyle]}>
         <Svg width={128} height={128} viewBox="0 0 128 128">
           {/* Outer circle (border) */}
           <Circle
@@ -120,30 +163,41 @@ const CardTask = React.memo(({ task, progress }: CardTaskProps) => {
             r={CIRCLE_RADIUS}
             stroke={task.color}
             strokeWidth={CIRCLE_STROKE_WIDTH}
-            fill={isCompleted ? task.color : 'none'}
+            fill={completed ? task.color : 'none'}
           />
           {/* Inner circle (progress) */}
-          {!isCompleted && (
+          {!completed && (
             <AnimatedPath
               fill={task.color}
               animatedProps={animatedProps}
             />
           )}
         </Svg>
-        <MaterialCommunityIcons 
-          name={task.icon} 
-          size={64} 
-          color={isCompleted ? '#fff' : task.color} 
-          style={[
-            StyleSheet.absoluteFill, 
-            { 
+        <Reanimated.View style={[StyleSheet.absoluteFill, iconStyle]}>
+          <MaterialCommunityIcons 
+            name={task.icon} 
+            size={64} 
+            color={completed ? '#fff' : task.color} 
+            style={{ 
               textAlign: 'center',
               textAlignVertical: 'center',
               lineHeight: 128
-            }
-          ]} 
-        />
-      </View>
+            }} 
+          />
+        </Reanimated.View>
+        <Reanimated.View style={[StyleSheet.absoluteFill, checkmarkStyle, { justifyContent: 'center', alignItems: 'center' }]}>
+          <MaterialCommunityIcons 
+            name="check" 
+            size={64} 
+            color="#fff" 
+            style={{ 
+              textAlign: 'center',
+              textAlignVertical: 'center',
+              lineHeight: 128
+            }} 
+          />
+        </Reanimated.View>
+      </Reanimated.View>
       <Text style={styles.taskName} numberOfLines={1}>{task.name}</Text>
       {streakBadgeStyle && (
         <View style={styles.streakBadge}>
@@ -338,6 +392,7 @@ export const TaskCard = React.memo(({
   const progressAnim = useSharedValue(0);
   const [sides, setSides] = useState<[CardSide, CardSide]>(['task', 'calendar']);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const router = useRouter();
 
   const handlePressIn = () => {
@@ -369,7 +424,8 @@ export const TaskCard = React.memo(({
     } else if (visibleSide === 'stats' && onLongPressStats) {
       onLongPressStats();
     } else if (visibleSide === 'task' && onLongPressTask) {
-      onLongPressTask();
+      setIsCompleting(true);
+      // handlePressOut();
     }
   };
 
@@ -429,10 +485,18 @@ export const TaskCard = React.memo(({
     ],
   };
 
+  const handleTaskCompleted = useCallback(() => {
+    onLongPressTask?.();
+  }, []);
+
+  useEffect(() => {
+    setIsCompleting(false);
+  }, [task])
+
   const renderContent = (side: CardSide) => {
     switch (side) {
       case 'task':
-        return <CardTask task={task} progress={progressAnim} />;
+        return <CardTask task={task} progress={progressAnim} isCompleting={isCompleting} onCompleted={handleTaskCompleted} />;
       case 'calendar':
         return <CardCalendar task={task} />;
       case 'stats':
