@@ -10,6 +10,7 @@ interface TaskContextType {
   deleteTask: (taskId: string) => Promise<void>;
   completeTask: (taskId: string, date?: Date) => Promise<void>;
   uncompleteTask: (taskId: string, date: Date) => Promise<void>;
+  isTaskCompleted: (task: Task, date?: Date) => boolean;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -113,6 +114,19 @@ const calculateTaskStats = (completions: TaskCompletion[]): TaskStats => {
 
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [completionCache, setCompletionCache] = useState<Map<string, Set<string>>>(new Map());
+
+  // Update completion cache when tasks change
+  useEffect(() => {
+    const newCache = new Map<string, Set<string>>();
+    tasks.forEach(task => {
+      if (task.completions) {
+        const dates = new Set(task.completions.map(c => c.date));
+        newCache.set(task.id, dates);
+      }
+    });
+    setCompletionCache(newCache);
+  }, [tasks]);
 
   // Load tasks and calculate initial stats
   useEffect(() => {
@@ -226,6 +240,12 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await updateTask(updatedTask);
   };
 
+  const isCompleted = (task: Task, date: Date = new Date()) => {
+    const dateString = format(date, 'yyyy-MM-dd');
+    const taskDates = completionCache.get(task.id);
+    return taskDates?.has(dateString) ?? false;
+  };
+
   return (
     <TaskContext.Provider
       value={{
@@ -235,6 +255,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteTask,
         completeTask,
         uncompleteTask,
+        isTaskCompleted: isCompleted,
       }}
     >
       {children}

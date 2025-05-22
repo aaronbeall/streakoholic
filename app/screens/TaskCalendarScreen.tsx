@@ -26,7 +26,7 @@ type CalendarItem = CalendarDay | EmptyDay;
 export default function TaskCalendarScreen() {
   const router = useRouter();
   const { taskId } = useLocalSearchParams<{ taskId: string }>();
-  const { tasks, completeTask, uncompleteTask } = useTaskContext();
+  const { tasks, completeTask, uncompleteTask, isTaskCompleted } = useTaskContext();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const task = tasks.find(t => t.id === taskId);
@@ -41,9 +41,8 @@ export default function TaskCalendarScreen() {
 
   const days = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i + 1);
-    const dateString = format(date, 'yyyy-MM-dd');
-    const isCompleted = task.completions?.some(completion => completion.date === dateString);
-    const isToday = dateString === today;
+    const isCompleted = isTaskCompleted(task, date);
+    const isToday = format(date, 'yyyy-MM-dd') === today;
     return {
       date,
       isCompleted,
@@ -51,11 +50,11 @@ export default function TaskCalendarScreen() {
       dayNumber: i + 1
     };
   }),
-  [currentMonth, daysInMonth, task.completions, today]);
+  [currentMonth, daysInMonth, task, isTaskCompleted, today]);
 
   const handleDayPress = (date: Date) => {
     const dateString = format(date, 'yyyy-MM-dd');
-    const isCompleted = task.completions?.some(completion => completion.date === dateString);
+    const isCompleted = isTaskCompleted(task, date);
     const isFuture = dateString > today;
     
     if (isFuture) {

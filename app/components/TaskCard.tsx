@@ -17,6 +17,7 @@ import AnimatedSvg, {
   withTiming
 } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
+import { useTaskContext } from '../context/TaskContext';
 import { Task } from '../types';
 
 const AnimatedPath = AnimatedSvg.createAnimatedComponent(Path);
@@ -39,7 +40,7 @@ interface CardTaskProps {
 }
 
 const CardTask = React.memo(({ task, progress }: CardTaskProps) => {
-
+  const { isTaskCompleted } = useTaskContext();
   const getStreakBadgeStyle = () => {
     const currentStreak = task.stats?.currentStreak || 0;
     const lastStreak = task.stats?.lastStreak || 0;
@@ -106,9 +107,7 @@ const CardTask = React.memo(({ task, progress }: CardTaskProps) => {
     };
   });
 
-  const isCompleted = task.completions?.some(completion => 
-    completion.date === format(new Date(), 'yyyy-MM-dd')
-  );
+  const isCompleted = isTaskCompleted(task);
 
   return (
     <View style={styles.contentContainer}>
