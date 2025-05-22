@@ -2,14 +2,17 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export type MaterialCommunityIconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
+export type FrequencyType = 'daily' | 'specific_days_of_week' | 'days_per_week' | 'days_per_month';
+
 export interface Task {
   id: string;
   name: string;
   icon: MaterialCommunityIconName;
   color: string;
+  frequency: FrequencyType;
   daysOfWeek: number[];
+  daysPerWeek: number;
   timesPerDay: number;
-  duration: number;
   createdAt: string;
   updatedAt: string;
   stats?: TaskStats;

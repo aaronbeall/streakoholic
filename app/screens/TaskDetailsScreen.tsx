@@ -87,10 +87,6 @@ export default function TaskDetailsScreen() {
               <Text style={styles.infoLabel}>Times Per Day</Text>
               <Text style={styles.infoValue}>{task.timesPerDay}</Text>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Duration</Text>
-              <Text style={styles.infoValue}>{task.duration} minutes</Text>
-            </View>
           </View>
         </View>
 
