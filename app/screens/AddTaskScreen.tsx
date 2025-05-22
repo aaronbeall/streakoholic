@@ -176,7 +176,7 @@ export const AddTaskScreen: React.FC = () => {
                         styles.dayText,
                         daysOfWeek.includes(index) && styles.selectedText
                       ]}>
-                        {day[0]}
+                        {day.slice(0, 1)}
                       </Text>
                     </TouchableOpacity>
                   ))}
