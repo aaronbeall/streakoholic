@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useDebounce } from 'use-debounce';
 import { MaterialCommunityIconName } from '../types';
@@ -41,11 +41,21 @@ const DEFAULT_ICONS: MaterialCommunityIconName[] = [
   'clock',
 ];
 
+const PAGE_SIZE = 12;
+
 interface IconPickerProps {
   selectedIcon: MaterialCommunityIconName;
   selectedColor: string;
   onIconSelect: (icon: MaterialCommunityIconName) => void;
 }
+
+const getInitialIcons = (selectedIcon: MaterialCommunityIconName): MaterialCommunityIconName[] => {
+  const initialIcons = DEFAULT_ICONS.slice(0, PAGE_SIZE);
+  if (!initialIcons.includes(selectedIcon)) {
+    return [selectedIcon, ...initialIcons];
+  }
+  return initialIcons;
+};
 
 export const IconPicker: React.FC<IconPickerProps> = ({
   selectedIcon,
@@ -55,10 +65,29 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery] = useDebounce(searchQuery, 300);
-  const [visibleCount, setVisibleCount] = useState(12);
+  const [icons, setIcons] = useState<MaterialCommunityIconName[]>(() => getInitialIcons(selectedIcon));
+  const [showingCount, setShowingCount] = useState(PAGE_SIZE);
+  const [searchIcons, setSearchIcons] = useState<MaterialCommunityIconName[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
   const searchInputRef = useRef<TextInput>(null);
   const searchHeight = useRef(new Animated.Value(0)).current;
+
+  // Handle search results
+  useEffect(() => {
+    if (!debouncedQuery) {
+      setSearchIcons([]);
+      return;
+    }
+
+    const searchTerms = debouncedQuery.toLowerCase().split(/\s+/).filter(Boolean);
+    const results = ALL_ICONS.filter(icon => {
+      const iconName = icon.toLowerCase();
+      return searchTerms.every(term => iconName.includes(term));
+    });
+    setSearchIcons(results);
+    setIcons(results.slice(0, PAGE_SIZE));
+    setShowingCount(PAGE_SIZE);
+  }, [debouncedQuery]);
 
   // Animate search container height
   useEffect(() => {
@@ -67,7 +96,6 @@ export const IconPicker: React.FC<IconPickerProps> = ({
       duration: 200,
       useNativeDriver: false,
     }).start(() => {
-      // Focus input after animation completes
       if (showSearch) {
         setTimeout(() => {
           searchInputRef.current?.focus();
@@ -76,44 +104,28 @@ export const IconPicker: React.FC<IconPickerProps> = ({
     });
   }, [showSearch]);
 
-  // Reset visible count when search changes
-  useEffect(() => {
-    setVisibleCount(12);
-  }, [debouncedQuery]);
-
-  // Memoize filtered icons
-  const filteredIcons = useMemo(() => {
-    if (!debouncedQuery) {
-      return DEFAULT_ICONS;
-    }
-
-    const searchTerms = debouncedQuery.toLowerCase().split(/\s+/).filter(Boolean);
-    
-    return ALL_ICONS
-      .filter(icon => {
-        const iconName = icon.toLowerCase();
-        return searchTerms.every(term => iconName.includes(term));
-      });
-  }, [debouncedQuery]);
-
   const handleShowMore = useCallback(() => {
-    setVisibleCount(prev => prev + 12);
-  }, []);
+    const sourceIcons = debouncedQuery ? searchIcons : DEFAULT_ICONS;
+    const newIcons = sourceIcons.slice(showingCount, showingCount + PAGE_SIZE);
+    setIcons(prev => [...new Set([...prev, ...newIcons])]);
+    setShowingCount(prev => prev + PAGE_SIZE);
+  }, [debouncedQuery, searchIcons, showingCount]);
 
-  // Scroll to bottom when additional colors are added
+  // Scroll to bottom when additional icons are added
   useEffect(() => {
-    if (visibleCount > 0) {
+    if (icons.length > showingCount - PAGE_SIZE) {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100); // Small delay to ensure content is rendered
+      }, 100);
     }
-  }, [visibleCount]);
+  }, [icons, showingCount]);
 
   const handleShowLess = useCallback(() => {
     setShowSearch(false);
     setSearchQuery('');
-    setVisibleCount(12);
-  }, []);
+    setIcons(getInitialIcons(selectedIcon));
+    setShowingCount(PAGE_SIZE);
+  }, [selectedIcon]);
 
   // Scroll to top when search query changes
   useEffect(() => {
@@ -121,6 +133,10 @@ export const IconPicker: React.FC<IconPickerProps> = ({
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     }
   }, [debouncedQuery]);
+
+  const hasMoreIcons = debouncedQuery 
+    ? searchIcons.length > showingCount
+    : DEFAULT_ICONS.length > showingCount;
 
   return (
     <View>
@@ -160,7 +176,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.iconGrid}>
-          {filteredIcons.slice(0, visibleCount).map((icon) => (
+          {icons.map((icon) => (
             <TouchableOpacity
               key={icon}
               style={[
@@ -176,7 +192,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
               />
             </TouchableOpacity>
           ))}
-          {filteredIcons.length > visibleCount && (
+          {hasMoreIcons && (
             <TouchableOpacity
               style={styles.moreButton}
               onPress={() => {
