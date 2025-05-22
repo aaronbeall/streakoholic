@@ -3,43 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useDebounce } from 'use-debounce';
 import { MaterialCommunityIconName } from '../types';
-
-// Get all available icons from MaterialCommunityIcons
-const ALL_ICONS = Object.keys(MaterialCommunityIcons.glyphMap) as MaterialCommunityIconName[];
-
-const DEFAULT_ICONS: MaterialCommunityIconName[] = [
-  'run',
-  'dumbbell',
-  'book-open-variant',
-  'meditation',
-  'water',
-  'food-apple',
-  'sleep',
-  'brush',
-  'music',
-  'pencil',
-  'yoga',
-  'bike',
-  'swim',
-  'weight',
-  'book-open',
-  'pill',
-  'coffee',
-  'bed',
-  'toothbrush',
-  'guitar-acoustic',
-  'pencil-outline',
-  'heart',
-  'star',
-  'target',
-  'flag',
-  'trophy',
-  'medal',
-  'crown',
-  'lightning-bolt',
-  'fire',
-  'clock',
-];
+import { ALL_ICONS, DEFAULT_ICONS } from '../constants/task';
 
 const PAGE_SIZE = 12;
 

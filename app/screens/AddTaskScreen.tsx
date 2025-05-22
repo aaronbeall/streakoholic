@@ -11,15 +11,28 @@ import {
 } from 'react-native';
 import { ColorPicker } from '../components/ColorPicker';
 import { IconPicker } from '../components/IconPicker';
+import { DEFAULT_COLORS, DEFAULT_ICONS } from '../constants/task';
 import { useTaskContext } from '../context/TaskContext';
 import { MaterialCommunityIconName } from '../types';
 
 export const AddTaskScreen: React.FC = () => {
   const router = useRouter();
   const { addTask, tasks } = useTaskContext();
+
+  // Find first unused icon and color
+  const { initialIcon, initialColor } = useMemo(() => {
+    const usedIcons = new Set(tasks.map(task => task.icon));
+    const usedColors = new Set(tasks.map(task => task.color));
+
+    const unusedIcon = DEFAULT_ICONS.find(icon => !usedIcons.has(icon)) || DEFAULT_ICONS[0];
+    const unusedColor = DEFAULT_COLORS.find(color => !usedColors.has(color)) || DEFAULT_COLORS[0];
+
+    return { initialIcon: unusedIcon, initialColor: unusedColor };
+  }, [tasks]);
+
   const [name, setName] = useState('');
-  const [selectedIcon, setSelectedIcon] = useState<MaterialCommunityIconName>('run');
-  const [selectedColor, setSelectedColor] = useState('#FF6B6B');
+  const [selectedIcon, setSelectedIcon] = useState<MaterialCommunityIconName>(initialIcon);
+  const [selectedColor, setSelectedColor] = useState(initialColor);
 
   const isNameValid = useMemo(() => {
     const trimmedName = name.trim();

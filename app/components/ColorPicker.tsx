@@ -2,23 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import tinycolor from 'tinycolor2';
-
-// Modern, pleasing colors suitable for icons
-const DEFAULT_COLORS = [
-  '#FF6B6B', // Coral Red
-  '#4ECDC4', // Turquoise
-  '#45B7D1', // Sky Blue
-  '#96CEB4', // Sage Green
-  '#FFD93D', // Warm Yellow
-  '#9B59B6', // Royal Purple
-  '#E67E22', // Burnt Orange
-  '#2ECC71', // Emerald
-  '#F1C40F', // Sunflower
-  '#3498DB', // Ocean Blue
-  '#E74C3C', // Cherry Red
-  '#1ABC9C', // Mint
-  '#E84393', // Rose
-];
+import { DEFAULT_COLORS } from '../constants/task';
 
 interface ColorPickerProps {
   selectedColor: string;
