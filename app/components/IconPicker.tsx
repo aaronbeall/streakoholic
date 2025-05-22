@@ -7,7 +7,7 @@ import { MaterialCommunityIconName } from '../types';
 // Get all available icons from MaterialCommunityIcons
 const ALL_ICONS = Object.keys(MaterialCommunityIcons.glyphMap) as MaterialCommunityIconName[];
 
-const INITIAL_ICON_OPTIONS: MaterialCommunityIconName[] = [
+const DEFAULT_ICONS: MaterialCommunityIconName[] = [
   'run',
   'dumbbell',
   'book-open-variant',
@@ -20,9 +20,6 @@ const INITIAL_ICON_OPTIONS: MaterialCommunityIconName[] = [
   'pencil',
   'yoga',
   'bike',
-];
-
-const ADDITIONAL_ICON_OPTIONS: MaterialCommunityIconName[] = [
   'swim',
   'weight',
   'book-open',
@@ -55,7 +52,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   selectedColor,
   onIconSelect,
 }) => {
-  const [showAll, setShowAll] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery] = useDebounce(searchQuery, 300);
   const [visibleCount, setVisibleCount] = useState(12);
@@ -66,18 +63,18 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   // Animate search container height
   useEffect(() => {
     Animated.timing(searchHeight, {
-      toValue: showAll ? 1 : 0,
+      toValue: showSearch ? 1 : 0,
       duration: 200,
       useNativeDriver: false,
     }).start(() => {
       // Focus input after animation completes
-      if (showAll) {
+      if (showSearch) {
         setTimeout(() => {
           searchInputRef.current?.focus();
         }, 200);
       }
     });
-  }, [showAll]);
+  }, [showSearch]);
 
   // Reset visible count when search changes
   useEffect(() => {
@@ -87,7 +84,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   // Memoize filtered icons
   const filteredIcons = useMemo(() => {
     if (!debouncedQuery) {
-      return [...INITIAL_ICON_OPTIONS, ...ADDITIONAL_ICON_OPTIONS];
+      return DEFAULT_ICONS;
     }
 
     const searchTerms = debouncedQuery.toLowerCase().split(/\s+/).filter(Boolean);
@@ -113,7 +110,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   }, [visibleCount]);
 
   const handleShowLess = useCallback(() => {
-    setShowAll(false);
+    setShowSearch(false);
     setSearchQuery('');
     setVisibleCount(12);
   }, []);
@@ -132,7 +129,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
         {
           height: searchHeight.interpolate({
             inputRange: [0, 1],
-            outputRange: [0, 45], // 56 = height of search input + margin
+            outputRange: [0, 45],
           }),
           opacity: searchHeight,
           marginBottom: searchHeight.interpolate({
@@ -183,7 +180,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
             <TouchableOpacity
               style={styles.moreButton}
               onPress={() => {
-                setShowAll(true);
+                setShowSearch(true);
                 handleShowMore();
               }}
             >
@@ -196,7 +193,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
           )}
         </View>
       </ScrollView>
-      {showAll && (
+      {showSearch && (
         <TouchableOpacity
           style={styles.showLessButton}
           onPress={handleShowLess}
