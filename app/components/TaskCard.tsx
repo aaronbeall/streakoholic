@@ -450,12 +450,16 @@ export const TaskCard = React.memo(({
         delayLongPress={500}
         style={styles.touchable}
       >
-        <Animated.View style={[styles.card, frontAnimatedStyle]}>
-          {renderContent(sides[0])}
+        <Animated.View style={[styles.cardContainer, frontAnimatedStyle]}>
+          <View style={[styles.card]}>
+            {renderContent(sides[0])}
+          </View>
         </Animated.View>
 
-        <Animated.View style={[styles.card, styles.cardBack, backAnimatedStyle]}>
-          {renderContent(sides[1])}
+        <Animated.View style={[styles.cardContainer, styles.cardBack, backAnimatedStyle]}>
+          <View style={[styles.card]}>
+            {renderContent(sides[1])}
+          </View>
         </Animated.View>
       </Pressable>
     </View>
@@ -471,8 +475,13 @@ const styles = StyleSheet.create({
   touchable: {
     flex: 1,
   },
-  card: {
+  cardContainer: {
     position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backfaceVisibility: 'hidden',
+  },
+  card: {
     width: '100%',
     height: '100%',
     backgroundColor: '#fff',
@@ -486,7 +495,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    backfaceVisibility: 'hidden',
   },
   cardBack: {
     transform: [{ rotateY: '180deg' }],
