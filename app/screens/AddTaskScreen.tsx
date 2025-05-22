@@ -1,56 +1,35 @@
-import React, { useState } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
 import {
-  View,
+  Alert,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  Alert,
+  View,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { ColorPicker } from '../components/ColorPicker';
+import { IconPicker } from '../components/IconPicker';
 import { useTaskContext } from '../context/TaskContext';
 import { MaterialCommunityIconName } from '../types';
 
-const ICON_OPTIONS: MaterialCommunityIconName[] = [
-  'run',
-  'dumbbell',
-  'book-open-variant',
-  'meditation',
-  'water',
-  'food-apple',
-  'sleep',
-  'brush',
-  'music',
-  'pencil',
-];
-
-const COLOR_OPTIONS = [
-  '#FF6B6B',
-  '#4ECDC4',
-  '#45B7D1',
-  '#96CEB4',
-  '#FFEEAD',
-  '#D4A5A5',
-  '#9B59B6',
-  '#3498DB',
-  '#E67E22',
-  '#2ECC71',
-];
-
 export const AddTaskScreen: React.FC = () => {
   const router = useRouter();
-  const { addTask } = useTaskContext();
+  const { addTask, tasks } = useTaskContext();
   const [name, setName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState<MaterialCommunityIconName>('run');
-  const [selectedColor, setSelectedColor] = useState(COLOR_OPTIONS[0]);
-  const [timesPerDay, setTimesPerDay] = useState('1');
-  const [duration, setDuration] = useState('30');
+  const [selectedColor, setSelectedColor] = useState('#FF6B6B');
+
+  const isNameValid = useMemo(() => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return false;
+    return !tasks.some(task => task.name.toLowerCase() === trimmedName.toLowerCase());
+  }, [name, tasks]);
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter a task name');
+    if (!isNameValid) {
+      Alert.alert('Error', 'Please enter a unique task name');
       return;
     }
 
@@ -58,8 +37,8 @@ export const AddTaskScreen: React.FC = () => {
       name: name.trim(),
       icon: selectedIcon,
       color: selectedColor,
-      timesPerDay: parseInt(timesPerDay, 10) || 1,
-      duration: parseInt(duration, 10) || 30,
+      timesPerDay: 1,
+      duration: 30,
       daysOfWeek: [0, 1, 2, 3, 4, 5, 6], // All days by default
     };
 
@@ -76,79 +55,42 @@ export const AddTaskScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.label}>Task Name</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, !isNameValid && !!name.trim() && styles.inputError]}
           value={name}
           onChangeText={setName}
           placeholder="Enter task name"
           placeholderTextColor="#999"
         />
+        {!isNameValid && !!name.trim() && (
+          <Text style={styles.errorText}>This task name already exists</Text>
+        )}
       </View>
 
       <View style={styles.section}>
         <Text style={styles.label}>Icon</Text>
-        <View style={styles.iconGrid}>
-          {ICON_OPTIONS.map((icon) => (
-            <TouchableOpacity
-              key={icon}
-              style={[
-                styles.iconButton,
-                selectedIcon === icon && { backgroundColor: selectedColor },
-              ]}
-              onPress={() => setSelectedIcon(icon)}
-            >
-              <MaterialCommunityIcons
-                name={icon}
-                size={24}
-                color={selectedIcon === icon ? '#fff' : '#333'}
-              />
-            </TouchableOpacity>
-          ))}
-        </View>
+        <IconPicker
+          selectedIcon={selectedIcon}
+          selectedColor={selectedColor}
+          onIconSelect={setSelectedIcon}
+        />
       </View>
 
       <View style={styles.section}>
         <Text style={styles.label}>Color</Text>
-        <View style={styles.colorGrid}>
-          {COLOR_OPTIONS.map((color) => (
-            <TouchableOpacity
-              key={color}
-              style={[
-                styles.colorButton,
-                { backgroundColor: color },
-                selectedColor === color && styles.selectedColor,
-              ]}
-              onPress={() => setSelectedColor(color)}
-            />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.label}>Times Per Day</Text>
-        <TextInput
-          style={styles.input}
-          value={timesPerDay}
-          onChangeText={setTimesPerDay}
-          keyboardType="number-pad"
-          placeholder="Enter number of times per day"
-          placeholderTextColor="#999"
+        <ColorPicker
+          selectedColor={selectedColor}
+          onColorSelect={setSelectedColor}
         />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Duration (minutes)</Text>
-        <TextInput
-          style={styles.input}
-          value={duration}
-          onChangeText={setDuration}
-          keyboardType="number-pad"
-          placeholder="Enter duration in minutes"
-          placeholderTextColor="#999"
-        />
-      </View>
-
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Save Task</Text>
+      <TouchableOpacity 
+        style={[styles.saveButton, !isNameValid && styles.saveButtonDisabled]} 
+        onPress={handleSave}
+        disabled={!isNameValid}
+      >
+        <Text style={[styles.saveButtonText, !isNameValid && styles.saveButtonTextDisabled]}>
+          Save Task
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -177,32 +119,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+  inputError: {
+    borderColor: '#FF3B30',
   },
-  iconButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  colorButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  selectedColor: {
-    borderWidth: 3,
-    borderColor: '#333',
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 14,
+    marginTop: 4,
   },
   saveButton: {
     backgroundColor: '#007AFF',
@@ -212,9 +135,15 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 32,
   },
+  saveButtonDisabled: {
+    backgroundColor: '#E5E5EA',
+  },
   saveButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  saveButtonTextDisabled: {
+    color: '#8E8E93',
   },
 }); 
