@@ -7,9 +7,9 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { TouchableOpacity } from 'react-native-gesture-handler';
 import { ColorPicker } from '../components/ColorPicker';
 import { IconPicker } from '../components/IconPicker';
 import { DEFAULT_COLORS, DEFAULT_ICONS } from '../constants/task';
