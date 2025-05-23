@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { addMonths, format, getDay, getDaysInMonth, startOfMonth, subMonths } from 'date-fns';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { TaskHeader } from '../components/TaskHeader';
@@ -24,7 +24,6 @@ type EmptyDay = {
 type CalendarItem = CalendarDay | EmptyDay;
 
 export default function TaskCalendarScreen() {
-  const router = useRouter();
   const { taskId } = useLocalSearchParams<{ taskId: string }>();
   const { tasks, completeTask, uncompleteTask, isTaskCompleted } = useTaskContext();
   const [currentMonth, setCurrentMonth] = useState(new Date());

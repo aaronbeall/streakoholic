@@ -1,6 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { addDays, format, getDay, getDaysInMonth, parseISO, startOfMonth, startOfWeek } from 'date-fns';
-import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -22,6 +21,7 @@ import Reanimated, {
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useTaskContext } from '../context/TaskContext';
 import { Task } from '../types';
+import { ParticleSystem } from './ParticleSystem';
 
 const AnimatedPath = Reanimated.createAnimatedComponent(Path);
 
@@ -49,6 +49,8 @@ const CardTask = React.memo(({ task, progress, isCompleting, onCompleted }: Card
   const checkmarkOpacity = useSharedValue(0);
   const iconOpacity = useSharedValue(1);
   const scale = useSharedValue(1);
+  const badgeScale = useSharedValue(1);
+  const [showParticles, setShowParticles] = useState(false);
 
   const getStreakBadgeStyle = () => {
     const currentStreak = task.stats?.currentStreak || 0;
@@ -131,6 +133,20 @@ const CardTask = React.memo(({ task, progress, isCompleting, onCompleted }: Card
 
   const completed = isTaskCompleted(task) || isCompleting;
 
+  const badgeStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: badgeScale.value }]
+  }));
+
+  useEffect(() => {
+    if (streakBadgeStyle?.icon === 'fire') {
+      badgeScale.value = withSequence(
+        withSpring(1.2, { damping: 8, stiffness: 100 }),
+        withSpring(1, { damping: 8, stiffness: 100 })
+      );
+      setShowParticles(true);
+    }
+  }, [task.stats?.currentStreak, streakBadgeStyle?.icon, badgeScale]);
+
   useEffect(() => {
     if (isCompleting) {
       // Pop animation
@@ -150,7 +166,7 @@ const CardTask = React.memo(({ task, progress, isCompleting, onCompleted }: Card
       }, 500);
       setTimeout(() => onCompleted(), 800);
     }
-  }, [isCompleting]);
+  }, [checkmarkOpacity, iconOpacity, isCompleting, onCompleted, scale]);
 
   return (
     <View style={styles.contentContainer}>
@@ -200,7 +216,7 @@ const CardTask = React.memo(({ task, progress, isCompleting, onCompleted }: Card
       </Reanimated.View>
       <Text style={styles.taskName} numberOfLines={1}>{task.name}</Text>
       {streakBadgeStyle && (
-        <View style={styles.streakBadge}>
+        <Reanimated.View style={[styles.streakBadge, badgeStyle]}>
           <View style={[styles.streakBubble, { backgroundColor: streakBadgeStyle.backgroundColor }]}>
             <MaterialCommunityIcons name={streakBadgeStyle.icon} size={14} color="#fff" />
             <Text style={styles.streakText}>{streakBadgeStyle.value}</Text>
@@ -213,7 +229,12 @@ const CardTask = React.memo(({ task, progress, isCompleting, onCompleted }: Card
               style={styles.trophyIcon} 
             />
           )}
-        </View>
+          {showParticles && (
+            <ParticleSystem 
+              onComplete={() => setShowParticles(false)}
+            />
+          )}
+        </Reanimated.View>
       )}
     </View>
   );
@@ -393,7 +414,6 @@ export const TaskCard = React.memo(({
   const [sides, setSides] = useState<[CardSide, CardSide]>(['task', 'calendar']);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
-  const router = useRouter();
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -487,7 +507,7 @@ export const TaskCard = React.memo(({
 
   const handleTaskCompleted = useCallback(() => {
     onLongPressTask?.();
-  }, []);
+  }, [onLongPressTask]);
 
   useEffect(() => {
     setIsCompleting(false);
