@@ -166,7 +166,7 @@ const CardTask = React.memo(({ task, progress, isCompleting, onCompleted }: Card
       }, 500);
       setTimeout(() => onCompleted(), 800);
     }
-  }, [checkmarkOpacity, iconOpacity, isCompleting, onCompleted, scale]);
+  }, [isCompleting]);
 
   return (
     <View style={styles.contentContainer}>
